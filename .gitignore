@@ -1,0 +1,19 @@
+# --- Вихідний код Odoo: НЕ наш код, тому не комітимо ---
+vendor/odoo/
+
+# --- Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# --- Odoo runtime ---
+data/filestore/
+data/sessions/
+*.log
+odoo.log
+
+# --- Інструменти ---
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Меню кредитної політики
+     ========================================================================= -->
+<odoo>
+
+    <menuitem id="menu_techdistrib_credit_root"
+              name="Кредитна політика"
+              parent="techdistrib_base.menu_techdistrib_root"
+              sequence="20"/>
+
+    <!-- Черга на погодження — головний екран кредитного контролера.
+         Дія вже має search_default_filter_pending=1, тож контролер
+         одразу бачить лише те, що чекає на його рішення. -->
+    <menuitem id="menu_techdistrib_credit_requests"
+              name="Запити на погодження"
+              parent="menu_techdistrib_credit_root"
+              action="action_credit_request"
+              sequence="10"/>
+
+    <menuitem id="menu_techdistrib_credit_requests_all"
+              name="Уся історія запитів"
+              parent="menu_techdistrib_credit_root"
+              action="action_credit_request_all"
+              sequence="20"
+              groups="group_credit_controller"/>
+
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Cron: оновлення прострочених гарантійних звернень
+     ========================================================================= -->
+<odoo>
+
+    <record id="ir_cron_techdistrib_overdue_claims" model="ir.cron">
+        <field name="name">TechDistrib: прострочені гарантійні звернення</field>
+        <field name="model_id" ref="model_techdistrib_warranty_claim"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_refresh_overdue_claims()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+</odoo>

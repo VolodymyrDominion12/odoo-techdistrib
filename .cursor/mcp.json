@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "odoo": {
+      "command": "/home/volodymyr/PycharmProjects/odoo-techdistrib/.venv/bin/fast-odoo-mcp",
+      "args": [],
+      "env": {
+        "ODOO_URL": "http://localhost:8069",
+        "ODOO_DB": "techdistrib",
+        "ODOO_USER": "admin",
+        "ODOO_PASSWORD": "admin",
+        "ODOO_LOCALE": "en_US",
+        "ODOO_MCP_READONLY": "true",
+        "ODOO_MCP_LOG_LEVEL": "WARNING"
+      }
+    },
+    "odoo-tests": {
+      "command": "/home/volodymyr/PycharmProjects/odoo-techdistrib/.venv/bin/python",
+      "args": [
+        "-m",
+        "mcp.server.filesystem",
+        "/home/volodymyr/PycharmProjects/odoo-techdistrib/custom_addons"
+      ]
+    }
+  }
+}

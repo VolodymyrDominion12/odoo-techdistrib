@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Розширення картки серійного номера (stock.lot)
+     ========================================================================= -->
+<odoo>
+
+    <record id="view_production_lot_form_techdistrib_warranty" model="ir.ui.view">
+        <field name="name">stock.lot.form.techdistrib.warranty</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Кнопка створення звернення прямо з картки номера.
+                 Це головний робочий сценарій сервісного інженера:
+                 він сканує номер і одразу оформлює звернення. -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_create_warranty_claim"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-wrench">
+                    <span class="o_stat_text">Гарантійне</span>
+                    <span class="o_stat_text">звернення</span>
+                </button>
+                <button name="action_view_warranty_claims"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-list"
+                        invisible="warranty_claim_count == 0">
+                    <field name="warranty_claim_count"
+                           widget="statinfo"
+                           string="Звернень"/>
+                </button>
+            </xpath>
+
+            <!-- Вкладка «Гарантія».
+                 ⚠️ Якір — //notebook у формі лота. Зверни увагу: сама
+                 стандартна форма має notebook із умовою
+                 invisible="not display_complete" (він з'являється лише
+                 коли номер повністю налаштований). Ми додаємо СВОЮ
+                 вкладку в той самий notebook, тому вона успадкує його
+                 видимість. Це прийнятно: гарантійні поля мають сенс
+                 лише для налаштованого номера. -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Гарантія" name="techdistrib_warranty">
+                    <group>
+                        <group string="Терміни">
+                            <field name="warranty_state" widget="badge"
+                                   decoration-success="warranty_state == 'under'"
+                                   decoration-danger="warranty_state == 'expired'"
+                                   decoration-muted="warranty_state == 'unknown'"/>
+                            <field name="warranty_start_date"/>
+                            <field name="warranty_end_date"/>
+                            <field name="warranty_months_applied"/>
+                            <field name="warranty_days_left"
+                                   invisible="warranty_state != 'under'"/>
+                        </group>
+                        <group string="Продаж">
+                            <field name="warranty_customer_id"/>
+                            <field name="warranty_sale_order_id"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-info" role="alert"
+                         invisible="warranty_state != 'unknown'">
+                        Дати гарантії проставляються АВТОМАТИЧНО при
+                        підтвердженні вихідного відвантаження. Якщо номер
+                        продано до впровадження системи — заповніть дати
+                        вручну.
+                    </div>
+
+                    <field name="warranty_claim_ids" readonly="1">
+                        <list string="Гарантійні звернення">
+                            <field name="name"/>
+                            <field name="reported_date"/>
+                            <field name="state" widget="badge"/>
+                            <field name="resolution"/>
+                            <field name="repair_cost" widget="monetary"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Колонки гарантії у списку серійних номерів -->
+    <record id="view_production_lot_tree_techdistrib_warranty" model="ir.ui.view">
+        <field name="name">stock.lot.list.techdistrib.warranty</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="warranty_end_date" optional="hide"/>
+                <field name="warranty_state" optional="hide" widget="badge"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

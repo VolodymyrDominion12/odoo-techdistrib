@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Подання матриці дилерських знижок
+     ========================================================================= -->
+<odoo>
+
+    <!-- Дії — оголошені ПЕРШИМИ (див. урок 4 про порядок у data-файлах) -->
+    <record id="action_discount_matrix" model="ir.actions.act_window">
+        <field name="name">Матриця знижок</field>
+        <field name="res_model">techdistrib.discount.matrix</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Створіть перший рядок матриці знижок
+            </p>
+            <p>
+                Матриця визначає, яку знижку отримує дилер залежно від
+                свого рівня та категорії товару. Кожен рядок автоматично
+                стає правилом прайс-листа відповідного рівня.
+            </p>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         СПИСОК — головний робочий екран бізнесу
+         =====================================================================
+         editable="bottom" + sequence handle = редагування «як у Excel».
+         Це важливо: бізнес звик правити знижки в таблиці, і давати йому
+         форму для кожного з 16 рядків означало б, що ним не користуватимуться.
+         ===================================================================== -->
+    <record id="view_discount_matrix_list" model="ir.ui.view">
+        <field name="name">techdistrib.discount.matrix.list</field>
+        <field name="model">techdistrib.discount.matrix</field>
+        <field name="arch" type="xml">
+            <!-- ⚠️ ТУТ НЕМАЄ default_group_by — і це не недогляд.
+                 Атрибут default_group_by існує лише в <kanban>.
+                 У <list> початкове групування задається через
+                 context дії: {'search_default_group_tier': 1}.
+                 Додати його сюди означало б помилку валідації подання. -->
+            <list string="Матриця знижок" editable="bottom">
+                <field name="tier_id"/>
+                <field name="categ_id"/>
+                <field name="discount" widget="percentage"/>
+                <field name="company_id" groups="base.group_multi_company"
+                       column_invisible="True"/>
+                <field name="currency_id" column_invisible="True"/>
+                <!-- Колонка «Правило прайс-листа» — це «лампочка здоров'я»
+                     синхронізації: якщо вона порожня, правило не створено
+                     і треба натиснути «Перебудувати прайс-лист». -->
+                <field name="pricelist_item_id" optional="show" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_discount_matrix_form" model="ir.ui.view">
+        <field name="name">techdistrib.discount.matrix.form</field>
+        <field name="model">techdistrib.discount.matrix</field>
+        <field name="arch" type="xml">
+            <form string="Рядок матриці знижок">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="tier_id" options="{'no_create': True}"/>
+                            <field name="categ_id" options="{'no_create': True}"/>
+                            <field name="discount" widget="percentage"/>
+                        </group>
+                        <group string="Синхронізація">
+                            <field name="pricelist_item_id" readonly="1"
+                                   options="{'no_create': True, 'no_open': False}"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="display_name" invisible="1"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        Цей рядок автоматично створює правило в прайс-листі
+                        рівня <field name="tier_id" readonly="1" class="oe_inline"/>.
+                        Зміна відсотка одразу оновить правило.
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_discount_matrix_search" model="ir.ui.view">
+        <field name="name">techdistrib.discount.matrix.search</field>
+        <field name="model">techdistrib.discount.matrix</field>
+        <field name="arch" type="xml">
+            <search string="Пошук у матриці">
+                <field name="tier_id"/>
+                <field name="categ_id"/>
+                <filter name="filter_no_discount" string="Без знижки"
+                        domain="[('discount', '&lt;=', 0)]"/>
+                <filter name="filter_high_discount" string="Знижка понад 20 %"
+                        domain="[('discount', '&gt;', 20)]"/>
+                <!-- Фільтр рядків, для яких правило прайс-листа не створено.
+                     Це фільтр «покажи проблеми синхронізації». -->
+                <filter name="filter_not_synced" string="Не синхронізовані"
+                        domain="[('pricelist_item_id', '=', False)]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_tier" string="Рівень партнера"
+                            context="{'group_by': 'tier_id'}"/>
+                    <filter name="group_categ" string="Категорія"
+                            context="{'group_by': 'categ_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+</odoo>

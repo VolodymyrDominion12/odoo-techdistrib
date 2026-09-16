@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_discount_matrix_user,techdistrib.discount.matrix.user,model_techdistrib_discount_matrix,techdistrib_base.group_dealer_user,1,0,0,0
+access_discount_matrix_manager,techdistrib.discount.matrix.manager,model_techdistrib_discount_matrix,techdistrib_base.group_dealer_manager,1,1,1,0
+access_discount_matrix_admin,techdistrib.discount.matrix.admin,model_techdistrib_discount_matrix,base.group_system,1,1,1,1

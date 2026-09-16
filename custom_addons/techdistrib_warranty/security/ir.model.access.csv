@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_warranty_claim_user,techdistrib.warranty.claim.user,model_techdistrib_warranty_claim,techdistrib_base.group_dealer_user,1,1,1,0
+access_warranty_claim_manager,techdistrib.warranty.claim.manager,model_techdistrib_warranty_claim,techdistrib_base.group_dealer_manager,1,1,1,1

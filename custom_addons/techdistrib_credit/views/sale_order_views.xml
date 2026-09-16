@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Розширення форми замовлення на продаж
+     =========================================================================
+     Три вставки:
+       1. Кнопка «Запросити погодження» в header.
+       2. Smart-кнопка «Кредит» у button_box.
+       3. Розширений банер попередження про кредитний ліміт.
+     ========================================================================= -->
+<odoo>
+
+    <record id="view_order_form_techdistrib_credit" model="ir.ui.view">
+        <field name="name">sale.order.form.techdistrib.credit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+
+            <!-- ============================================================
+                 1. КНОПКА «ЗАПРОСИТИ ПОГОДЖЕННЯ»
+                 ============================================================
+                 Якір — кнопка «Скасувати» (name="action_cancel").
+                 Чому саме вона: вона ЄДИНА в header. А от action_confirm
+                 там ДВІ — окремо для чернетки і окремо для надісланої
+                 пропозиції (перевірено в sale/views/sale_order_views.xml).
+
+                 Якби я прив'язався до action_confirm, моя кнопка з'явилася б
+                 лише в одному зі станів замовлення, і я б довго шукав причину.
+
+                 ВИСНОВОК: перед вибором якоря перевіряй його унікальність:
+                     grep -c 'name="action_confirm"' <файл_подання>
+                 Якщо лічильник > 1 — шукай інший якір.
+                 ============================================================ -->
+            <xpath expr="//button[@name='action_cancel']" position="after">
+                <button name="action_request_credit_approval"
+                        type="object"
+                        string="Запросити погодження"
+                        class="btn-primary"
+                        icon="fa-shield"
+                        invisible="not show_credit_approval_button"
+                        groups="sales_team.group_sale_salesman"/>
+            </xpath>
+
+            <!-- ============================================================
+                 2. SMART-КНОПКА
+                 ============================================================ -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_credit_requests"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-money"
+                        invisible="credit_request_count == 0">
+                    <field name="credit_request_count"
+                           widget="statinfo"
+                           string="Кредит"/>
+                </button>
+            </xpath>
+
+            <!-- ============================================================
+                 3. РОЗШИРЕНИЙ БАНЕР
+
+                 Стандартний банер Odoo виглядає так:
+                     <div class="alert alert-warning" role="alert"
+                          invisible="partner_credit_warning == ''">
+                         <field name="partner_credit_warning"/>
+                     </div>
+
+                 Ми вставляємо свій блок ВСЕРЕДИНУ цього банера, одразу
+                 після поля. Це дає важливу властивість: наш текст видно
+                 рівно тоді, коли видно стандартний банер — жодних
+                 дублювань і «стрибаючого» інтерфейсу.
+
+                 Наше обчислюване поле partner_credit_warning дописує свій
+                 текст до стандартного (див. models/sale_order.py).
+
+                 ⚠️ ПОМИЛКА, ЯКУ Я ТУТ ЛЕДЬ НЕ ЗРОБИВ: у першій версії цього
+                 блоку я для «наповнення» вставив <field name="partner_id"
+                 invisible="1"/>. Це дало б помилку
+                 «Field 'partner_id' used in view is already present» —
+                 партнер уже є у формі замовлення. Не додавай поля «просто
+                 щоб було»: кожне поле у поданні має нести зміст.
+                 ============================================================ -->
+            <xpath expr="//field[@name='partner_credit_warning']" position="after">
+                <div name="techdistrib_credit_block"
+                     invisible="not credit_is_blocked">
+                    <hr class="my-2"/>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa fa-ban fa-lg"/>
+                        <span class="fw-bold">
+                            Підтвердження заблоковано кредитною політикою
+                        </span>
+                    </div>
+                    <div class="mt-1 small">
+                        Натисніть «Запросити погодження», щоб надіслати запит
+                        кредитному контролеру. Розрахунок — у тексті вище.
+                    </div>
+                </div>
+
+                <div name="techdistrib_credit_approval"
+                     invisible="not credit_valid_approval_id">
+                    <hr class="my-2"/>
+                    <div class="d-flex align-items-center gap-2 text-success">
+                        <i class="fa fa-check-circle fa-lg"/>
+                        <span class="fw-bold">
+                            Діє схвалення перевищення ліміту
+                        </span>
+                    </div>
+                    <field name="credit_valid_approval_id"
+                           readonly="1"
+                           options="{'no_create': True}"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         КОЛОНКА В СПИСКУ ЗАМОВЛЕНЬ
+         ===================================================================== -->
+    <record id="view_quotation_tree_techdistrib_credit" model="ir.ui.view">
+        <field name="name">sale.order.list.techdistrib.credit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree_with_onboarding"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="credit_is_blocked" optional="hide" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

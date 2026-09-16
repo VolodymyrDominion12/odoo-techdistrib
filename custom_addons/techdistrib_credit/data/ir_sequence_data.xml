@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Послідовність для номерів кредитних запитів
+     ========================================================================= -->
+<odoo noupdate="1">
+
+    <record id="seq_techdistrib_credit_request" model="ir.sequence">
+        <field name="name">Запит на кредит</field>
+        <field name="code">techdistrib.credit.request</field>
+        <field name="prefix">CR-</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+        <field name="implementation">standard</field>
+    </record>
+
+</odoo>

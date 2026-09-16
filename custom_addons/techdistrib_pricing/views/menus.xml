@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Меню модуля дилерських знижок
+     ========================================================================= -->
+<odoo>
+
+    <menuitem id="menu_techdistrib_discount_matrix"
+              name="Матриця знижок"
+              parent="techdistrib_base.menu_techdistrib_dealer_program"
+              action="action_discount_matrix"
+              sequence="25"/>
+
+</odoo>

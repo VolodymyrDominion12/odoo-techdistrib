@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Початкові дані: рівні дилерського партнерства
+     =========================================================================
+     Ці записи створюються ОДИН РАЗ при встановленні модуля.
+     noupdate="1" означає: якщо адміністратор потім перейменує «Platinum»
+     у «Платиновий» або змінить поріг обороту — оновлення модуля
+     НЕ поверне початкові значення. Саме те, що потрібно для довідника.
+     ========================================================================= -->
+<odoo noupdate="1">
+
+    <record id="dealer_tier_bronze" model="techdistrib.dealer.tier">
+        <field name="name">Bronze</field>
+        <field name="code">bronze</field>
+        <field name="sequence">10</field>
+        <field name="min_annual_revenue">0</field>
+        <field name="description">Базовий рівень. Доступний одразу після підписання
+партнерського договору. Мінімальні знижки.</field>
+    </record>
+
+    <record id="dealer_tier_silver" model="techdistrib.dealer.tier">
+        <field name="name">Silver</field>
+        <field name="code">silver</field>
+        <field name="sequence">20</field>
+        <field name="min_annual_revenue">1000000</field>
+        <field name="description">Партнер із стабільними продажами та
+сертифікованим персоналом. Розширені знижки.</field>
+    </record>
+
+    <record id="dealer_tier_gold" model="techdistrib.dealer.tier">
+        <field name="name">Gold</field>
+        <field name="code">gold</field>
+        <field name="sequence">30</field>
+        <field name="min_annual_revenue">5000000</field>
+        <field name="description">Ключовий партнер із власним складом і
+передпродажною підтримкою. Пріоритетне постачання.</field>
+    </record>
+
+    <record id="dealer_tier_platinum" model="techdistrib.dealer.tier">
+        <field name="name">Platinum</field>
+        <field name="code">platinum</field>
+        <field name="sequence">40</field>
+        <field name="min_annual_revenue">20000000</field>
+        <field name="description">Стратегічний партнер. Персональний
+менеджер, ексклюзивні умови, максимальні знижки.</field>
+    </record>
+
+</odoo>

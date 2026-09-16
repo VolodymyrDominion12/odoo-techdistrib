@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Меню модуля гарантії
+     ========================================================================= -->
+<odoo>
+
+    <menuitem id="menu_techdistrib_warranty_root"
+              name="Гарантія та сервіс"
+              parent="techdistrib_base.menu_techdistrib_root"
+              sequence="30"/>
+
+    <menuitem id="menu_techdistrib_warranty_claims"
+              name="Гарантійні звернення"
+              parent="menu_techdistrib_warranty_root"
+              action="action_warranty_claim"
+              sequence="10"/>
+
+    <menuitem id="menu_techdistrib_warranty_claims_all"
+              name="Уся історія"
+              parent="menu_techdistrib_warranty_root"
+              action="action_warranty_claim_all"
+              sequence="20"/>
+
+</odoo>

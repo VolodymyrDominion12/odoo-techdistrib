@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_credit_request_user,techdistrib.credit.request.user,model_techdistrib_credit_request,techdistrib_base.group_dealer_user,1,1,1,0
+access_credit_request_controller,techdistrib.credit.request.controller,model_techdistrib_credit_request,group_credit_controller,1,1,1,1

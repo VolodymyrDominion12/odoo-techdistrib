@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Cron: прострочення схвалень, строк дії яких минув (FR-C06)
+     ========================================================================= -->
+<odoo>
+
+    <record id="ir_cron_techdistrib_expire_credit_approvals" model="ir.cron">
+        <field name="name">TechDistrib: прострочення схвалень кредитних лімітів</field>
+        <field name="model_id" ref="model_techdistrib_credit_request"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_expire_credit_approvals()</field>
+        <!-- Раз на добу достатньо: схвалення діє 7 днів, тож точність
+             до години тут не критична. А от навантаження від
+             щохвилинного сканування було б марним. -->
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+</odoo>

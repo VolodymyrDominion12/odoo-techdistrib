@@ -1,0 +1,62 @@
+# =============================================================================
+#  TechDistrib — інфраструктура для навчального проєкту Odoo 18
+# =============================================================================
+#  Тут ми піднімаємо ЛИШЕ PostgreSQL. Сам Odoo запускається нативно з venv,
+#  щоб у PyCharm можна було ставити breakpoint'и і читати код ядра.
+#
+#  Чому PostgreSQL, а не SQLite?
+#  ----------------------------
+#  Odoo не підтримує SQLite. І це принципово: ORM Odoo тісно зав'язаний на
+#  можливості PostgreSQL, яких немає в SQLite:
+#    * транзакції з блокуванням рядків (SELECT ... FOR UPDATE) — критично
+#      для резервування залишків на складі, щоб двоє менеджерів не продали
+#      одну й ту саму одиницю товару;
+#    * advisory locks — Odoo використовує їх, щоб cron-задачі не запускались
+#      паралельно у двох воркерах;
+#    * JSONB — для зберігання довільних структур;
+#    * повнотекстовий пошук.
+#
+#  Запуск:   docker compose up -d
+#  Зупинка:  docker compose down          (дані збережуться у томі)
+#  Повне видалення разом з даними:
+#            docker compose down -v
+# =============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: techdistrib_db
+    restart: unless-stopped
+    environment:
+      # Ці три змінні створюють суперкористувача при першій ініціалізації тому.
+      # Саме цим користувачем Odoo буде підключатись і САМ створювати бази.
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+      POSTGRES_DB: postgres
+      # Odoo створює багато дрібних транзакцій; дефолтний fsync дає надійність,
+      # але для навчального середовища важливіша швидкість.
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    command:
+      - "postgres"
+      # Розширення для нечіткого пошуку (використовується модулем base)
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "max_connections=100"
+    ports:
+      # Зовні 5437, бо 5432/5436 уже зайняті іншими твоїми проєктами.
+      # Формат "хост:контейнер" — на хості буде 5437.
+      - "127.0.0.1:5437:5432"
+    volumes:
+      # Іменований том = дані переживають `docker compose down`
+      - techdistrib_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Odoo не має стартувати, поки Postgres не готовий приймати з'єднання
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  techdistrib_pgdata:
+    name: techdistrib_pgdata

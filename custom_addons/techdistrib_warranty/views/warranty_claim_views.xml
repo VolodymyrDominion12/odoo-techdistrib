@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Подання гарантійних звернень
+     ========================================================================= -->
+<odoo>
+
+    <record id="action_warranty_claim_lot" model="ir.actions.act_window">
+        <field name="name">Серійний номер</field>
+        <field name="res_model">stock.lot</field>
+        <field name="view_mode">form</field>
+    </record>
+
+    <record id="action_warranty_claim" model="ir.actions.act_window">
+        <field name="name">Гарантійні звернення</field>
+        <field name="res_model">techdistrib.warranty.claim</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="context">{'search_default_filter_open': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Відкритих гарантійних звернень немає
+            </p>
+            <p>
+                Тут зʼявляються звернення по обладнанню, яке вийшло з ладу.
+                Кожне звернення привʼязане до серійного номера — саме це
+                дозволяє довести вендору право на компенсацію.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_warranty_claim_all" model="ir.actions.act_window">
+        <field name="name">Уся історія звернень</field>
+        <field name="res_model">techdistrib.warranty.claim</field>
+        <field name="view_mode">list,kanban,form</field>
+    </record>
+
+    <!-- =====================================================================
+         СПИСОК
+         ===================================================================== -->
+    <record id="view_warranty_claim_list" model="ir.ui.view">
+        <field name="name">techdistrib.warranty.claim.list</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="arch" type="xml">
+            <list string="Гарантійні звернення"
+                  decoration-danger="is_overdue"
+                  decoration-muted="state in ('closed', 'rejected')"
+                  decoration-success="state == 'resolved'">
+                <field name="name"/>
+                <field name="lot_id" string="Серійний номер"/>
+                <field name="product_id"/>
+                <field name="partner_id"/>
+                <field name="sold_to_partner_id" optional="hide"/>
+                <field name="reported_date"/>
+                <field name="deadline_date" optional="show"/>
+                <field name="is_under_warranty"
+                       decoration-success="is_under_warranty"
+                       decoration-danger="not is_under_warranty"/>
+                <field name="is_overdue"/>
+                <field name="state" widget="badge"
+                       decoration-info="state in ('draft', 'confirmed')"
+                       decoration-warning="state in ('diagnostics', 'waiting_vendor')"
+                       decoration-success="state in ('resolved', 'closed')"
+                       decoration-danger="state == 'rejected'"/>
+                <field name="resolution" optional="show"/>
+                <field name="repair_cost" widget="monetary" optional="hide"
+                       sum="Разом ремонтів"/>
+                <field name="vendor_compensation" widget="monetary" optional="hide"
+                       sum="Разом компенсацій"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="user_id" widget="many2one_avatar_user" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company"
+                       column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         КАНБАН — робоча дошка сервісного відділу
+         ===================================================================== -->
+    <record id="view_warranty_claim_kanban" model="ir.ui.view">
+        <field name="name">techdistrib.warranty.claim.kanban</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" sample="1">
+                <field name="state"/>
+                <field name="is_overdue"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between mb-1">
+                            <field name="name" class="fw-bold"/>
+                            <field name="is_overdue"
+                                   t-if="record.is_overdue.raw_value"
+                                   widget="boolean_badge"/>
+                        </div>
+                        <field name="lot_id" class="text-muted"/>
+                        <field name="product_id"/>
+                        <div class="mt-1">
+                            <field name="partner_id"/>
+                        </div>
+                        <footer>
+                            <field name="user_id" widget="many2one_avatar_user"/>
+                            <field name="reported_date"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ФОРМА
+         ===================================================================== -->
+    <record id="view_warranty_claim_form" model="ir.ui.view">
+        <field name="name">techdistrib.warranty.claim.form</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="arch" type="xml">
+            <form string="Гарантійне звернення">
+                <header>
+                    <button name="action_confirm" type="object"
+                            string="Прийняти" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_start_diagnostics" type="object"
+                            string="На діагностику"
+                            invisible="state != 'confirmed'"/>
+                    <button name="action_send_to_vendor" type="object"
+                            string="Відправити вендору"
+                            invisible="state not in ('diagnostics', 'confirmed')"/>
+                    <button name="action_resolve" type="object"
+                            string="Вирішено" class="btn-primary"
+                            invisible="state not in ('diagnostics', 'waiting_vendor')"/>
+                    <button name="action_close" type="object"
+                            string="Закрити"
+                            invisible="state != 'resolved'"/>
+                    <button name="action_reset_to_draft" type="object"
+                            string="Повернути в чернетку"
+                            invisible="state in ('draft',)"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,confirmed,diagnostics,resolved,closed"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_warranty_claim_lot)d"
+                                type="action"
+                                class="oe_stat_button"
+                                icon="fa-barcode"
+                                invisible="not lot_id"
+                                context="{'search_default_lot': lot_id}">
+                            <span class="o_stat_text">Серійний</span>
+                            <span class="o_stat_text">номер</span>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Обладнання">
+                            <field name="lot_id"
+                                   options="{'no_create': True}"
+                                   readonly="state != 'draft'"/>
+                                                        <field name="product_id" readonly="1"/>
+                            <field name="partner_id"
+                                   options="{'no_create': True}"
+                                   readonly="state not in ('draft', 'confirmed')"/>
+                            <field name="user_id"
+                                   widget="many2one_avatar_user"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+
+                        <group string="Ланцюжок доказів">
+                            <field name="sold_to_partner_id" readonly="1"/>
+                            <field name="sale_order_id" readonly="1"/>
+                            <field name="delivery_date" readonly="1"/>
+                            <field name="warranty_start_date" readonly="1"/>
+                            <field name="warranty_end_date" readonly="1"/>
+                            <field name="warranty_months" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <!-- Результат автоматичної перевірки гарантії.
+                         Колір банера залежить від результату — це дає
+                         інженеру відповідь за одну секунду. -->
+                    <div class="alert"
+                         role="alert"
+                         invisible="not lot_id"
+                         t-attf-class="alert-#{is_under_warranty ? 'success' : (is_our_product ? 'warning' : 'danger')}">
+                        <field name="warranty_check_note" nolabel="1" readonly="1"/>
+                    </div>
+
+                    <group>
+                        <group string="Строки">
+                            <field name="reported_date"
+                                   readonly="state != 'draft'"/>
+                            <field name="deadline_date" readonly="1"/>
+                            <field name="is_overdue"/>
+                            <field name="is_our_product" readonly="1"/>
+                            <field name="is_under_warranty" readonly="1"/>
+                            <field name="is_chargeable" readonly="1"/>
+                        </group>
+                        <group string="Гроші">
+                            <field name="repair_cost" widget="monetary"
+                                   readonly="not is_chargeable"/>
+                            <field name="vendor_rma_reference"/>
+                            <field name="vendor_compensation" widget="monetary"/>
+                            <field name="resolved_date" readonly="1"/>
+                            <field name="closed_date" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Опис і діагностика" name="description">
+                            <group>
+                                <field name="problem_description"
+                                       placeholder="Що зі слів клієнта не працює?"
+                                       readonly="state not in ('draft', 'confirmed', 'diagnostics')"/>
+                                <field name="diagnosis"
+                                       placeholder="Результат перевірки інженером"
+                                       readonly="state in ('closed', 'rejected')"/>
+                                <field name="resolution"
+                                       readonly="state in ('closed', 'rejected')"/>
+                                <field name="resolution_note"
+                                       placeholder="Обовʼязково при відмові"
+                                       readonly="state in ('closed',)"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ПОШУК
+         ===================================================================== -->
+    <record id="view_warranty_claim_search" model="ir.ui.view">
+        <field name="name">techdistrib.warranty.claim.search</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="arch" type="xml">
+            <search string="Пошук звернень">
+                <field name="name" string="Номер RMA"/>
+                <field name="lot_id" string="Серійний номер"/>
+                <field name="product_id"/>
+                <field name="partner_id"/>
+                <field name="sale_order_id"/>
+                <separator/>
+                <filter name="filter_open" string="Відкриті"
+                        domain="[('state', 'not in', ('closed', 'rejected'))]"/>
+                <filter name="filter_overdue" string="Прострочені"
+                        domain="[('is_overdue', '=', True)]"/>
+                <filter name="filter_our_product" string="Наш товар"
+                        domain="[('is_our_product', '=', True)]"/>
+                <separator/>
+                <!-- ⚠️ ФІЛЬТРУЄМО ПО ЗБЕРЕЖЕНОМУ ПОЛЮ, А НЕ ПО СТАНУ ГАРАНТІЇ.
+                     У stock.lot є поле warranty_state, але воно НЕ збережене.
+                     Фільтр по ньому Odoo мовчки проігнорував би (див. Модуль 2).
+                     Тому використовуємо домен по warranty_end_date із
+                     context_today() — і умова справді працює.
+
+                     Це загальний рецепт для фільтрів «дійсний на сьогодні»:
+                     порівнюй ЗБЕРЕЖЕНУ ДАТУ з context_today(). -->
+                <filter name="filter_under_warranty" string="Гарантія дійсна"
+                        domain="[('warranty_end_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter name="filter_expired" string="Гарантія закінчилась"
+                        domain="[('warranty_end_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="filter_mine" string="Мої звернення"
+                        domain="[('user_id', '=', uid)]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_state" string="Стан"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_user" string="Відповідальний"
+                            context="{'group_by': 'user_id'}"/>
+                    <filter name="group_partner" string="Хто звернувся"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_product" string="Товар"
+                            context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+</odoo>

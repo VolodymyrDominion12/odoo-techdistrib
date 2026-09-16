@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Розширення картки партнера: блок кредитної політики
+     =========================================================================
+     ⚠️ ЦІКАВА ДЕТАЛЬ: у картці партнера ВЖЕ Є група «Credit Limits» —
+     її додає стандартний модуль account (addons/account/views/partner_view.xml):
+
+         <group string="Credit Limits" name="credit_limits"
+                groups="account.group_account_invoice,account.group_account_readonly"
+                invisible="not show_credit_limit">
+             <field name="credit"/>
+             <field name="days_sales_outstanding"/>
+             <label for="use_partner_credit_limit"/>
+             <div class="o_row">
+                 <field name="use_partner_credit_limit"/>
+                 <field name="credit_limit" .../>
+             </div>
+         </group>
+
+     Тобто Odoo вже показує ліміт і борг. Навіщо наш блок?
+
+     Тому що стандартна група:
+       * доступна ЛИШЕ бухгалтерським групам — менеджер із продажу її не бачить;
+       * прихована, якщо вимкнено show_credit_limit;
+       * не показує нічого про блокування, прострочення чи запити.
+
+     Наш блок показує САМЕ ТЕ, ЩО ПОТРІБНО МЕНЕДЖЕРУ В РОБОТІ:
+     вільний залишок, відсоток використання і статус блокування.
+
+     Ми СВІДОМО не дублюємо групу credit_limits і не чіпаємо її —
+     просто додаємо свою поруч. Стандартний функціонал лишається
+     недоторканим, і це правильно: чужі поля хай показує той, хто їх створив.
+     ========================================================================= -->
+<odoo>
+
+    <record id="view_partner_form_techdistrib_credit" model="ir.ui.view">
+        <field name="name">res.partner.form.techdistrib.credit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="priority" eval="20"/>
+        <field name="arch" type="xml">
+
+            <!-- Smart-кнопки кредитного контролера -->
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_credit_requests"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-money"
+                        invisible="credit_request_count == 0">
+                    <field name="credit_request_count"
+                           widget="statinfo"
+                           string="Кредит"/>
+                </button>
+                <button name="action_view_open_invoices"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-file-text-o"
+                        invisible="credit_used &lt;= 0">
+                    <span class="o_stat_text">Відкриті</span>
+                    <span class="o_stat_text">рахунки</span>
+                </button>
+            </xpath>
+
+            <!-- Блок кредитних показників.
+                 Якір — стандартна група credit_limits модуля account.
+                 Ми вставляємо СВОЮ групу ОДРАЗУ ПІСЛЯ неї. -->
+            <xpath expr="//group[@name='credit_limits']" position="after">
+                <group string="Кредитна політика TechDistrib"
+                       name="techdistrib_credit_limits"
+                       invisible="not is_dealer">
+                    <field name="credit_used" widget="monetary"
+                           options="{'currency_field': 'currency_id'}"/>
+                    <field name="credit_available" widget="monetary"
+                           options="{'currency_field': 'currency_id'}"
+                           decoration-danger="credit_available &lt; 0"/>
+                    <field name="credit_usage_percent"
+                           widget="percentage"/>
+                    <field name="credit_overdue_amount" widget="monetary"
+                           options="{'currency_field': 'currency_id'}"
+                           decoration-danger="credit_overdue_amount &gt; 0"/>
+                    <field name="credit_oldest_overdue_date"
+                           invisible="not credit_overdue_amount"/>
+                    <field name="credit_is_blocked"/>
+                    <field name="credit_pending_request_count"
+                           invisible="not credit_pending_request_count"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         СПИСОК ПАРТНЕРІВ: колонки кредитного контролю
+         ===================================================================== -->
+    <record id="view_partner_tree_techdistrib_credit" model="ir.ui.view">
+        <field name="name">res.partner.list.techdistrib.credit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="credit_used" optional="hide" readonly="1"/>
+                <field name="credit_overdue_amount" optional="hide" readonly="1"
+                       decoration-danger="credit_overdue_amount &gt; 0"/>
+                <field name="credit_is_blocked" optional="hide" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ПОШУК ПАРТНЕРІВ: фільтри кредитного контролера
+         ===================================================================== -->
+    <record id="view_res_partner_filter_techdistrib_credit" model="ir.ui.view">
+        <field name="name">res.partner.search.techdistrib.credit</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='filter_dealer_dormant']" position="after">
+                <filter name="filter_credit_overdue" string="Заблоковані за борг"
+                        domain="[('credit_is_blocked', '=', True)]"/>
+                <filter name="filter_credit_pending" string="Мають запити на кредит"
+                        domain="[('credit_pending_request_count', '&gt;', 0)]"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

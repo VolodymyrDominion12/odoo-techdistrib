@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Категорії товарів TechDistrib
+     =========================================================================
+     Матриця знижок будується по КАТЕГОРІЯХ, а не по окремих товарах.
+     Це ключове рішення: 4 категорії × 4 рівні = 16 рядків замість
+     1200 SKU × 4 рівні = 4800 рядків.
+
+     noupdate="1" — категорії може доповнювати бізнес; оновлення модуля
+     не має затирати його зміни.
+     ========================================================================= -->
+<odoo noupdate="1">
+
+    <record id="product_category_servers" model="product.category">
+        <field name="name">Сервери та СХД</field>
+    </record>
+
+    <record id="product_category_network" model="product.category">
+        <field name="name">Мережеве обладнання</field>
+    </record>
+
+    <record id="product_category_iot" model="product.category">
+        <field name="name">Промисловий IoT</field>
+    </record>
+
+    <record id="product_category_accessories" model="product.category">
+        <field name="name">Аксесуари та комплектуючі</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Послідовність номерів гарантійних звернень (RMA)
+     ========================================================================= -->
+<odoo noupdate="1">
+
+    <record id="seq_techdistrib_warranty_claim" model="ir.sequence">
+        <field name="name">Гарантійне звернення (RMA)</field>
+        <field name="code">techdistrib.warranty.claim</field>
+        <field name="prefix">RMA-</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+        <field name="implementation">standard</field>
+    </record>
+
+</odoo>

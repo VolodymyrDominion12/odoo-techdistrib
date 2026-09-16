@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Меню
+     =========================================================================
+     Ієрархія навігації в Odoo:
+         Меню → Дія (ir.actions.act_window) → Модель → Подання
+
+     Меню без дії — це просто «тека» (як наше «Дилерська програма»).
+     Меню з дією — клікабельний пункт, що відкриває список.
+
+     Про атрибут groups="..." на меню:
+     Він ховає пункт від користувачів, які не мають цієї групи.
+     Звучить добре, але має неприємний наслідок: адміністратор, який
+     не є членом групи, теж НЕ ПОБАЧИТЬ пункт меню — і вирішить, що
+     модуль не встановився.
+
+     Тому тут ми свідомо НЕ обмежуємо меню групами: права доступу
+     перевіряються на рівні моделі (ir.model.access.csv) і записів (ir.rule).
+     Якщо користувач без прав відкриє список — Odoo покаже зрозумілу
+     помилку доступу. Це краще, ніж «мене не існує».
+     ========================================================================= -->
+<odoo>
+
+    <!-- Кореневе меню застосунку (application=True у маніфесті) -->
+    <menuitem id="menu_techdistrib_root"
+              name="TechDistrib"
+              sequence="90"/>
+
+    <!-- Проміжна «тека» -->
+    <menuitem id="menu_techdistrib_dealer_program"
+              name="Дилерська програма"
+              parent="menu_techdistrib_root"
+              sequence="10"/>
+
+    <menuitem id="menu_techdistrib_dealers"
+              name="Дилери"
+              parent="menu_techdistrib_dealer_program"
+              action="action_techdistrib_dealers"
+              sequence="10"/>
+
+    <menuitem id="menu_techdistrib_dealer_tiers"
+              name="Рівні партнерів"
+              parent="menu_techdistrib_dealer_program"
+              action="action_techdistrib_dealer_tier"
+              sequence="20"/>
+
+</odoo>

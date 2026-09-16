@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Початкова матриця дилерських знижок (з бізнес-вимог TechDistrib)
+     =========================================================================
+     Таблиця з документа бізнес-вимог:
+
+        Рівень \ Категорія | Сервери | Мережа | IoT | Аксесуари
+        ===================+=========+========+=====+===========
+        Bronze             |   5 %   |  7 %   | 6 % |   10 %
+        Silver             |  10 %   | 12 %   |11 % |   15 %
+        Gold               |  16 %   | 18 %   |17 % |   22 %
+        Platinum           |  22 %   | 25 %   |24 % |   30 %
+
+     ⚠️ ЗВЕРНИ УВАГУ НА РОЗДІЛЮВАЧІ РЯДКІВ ВИЩЕ: я використав символи
+     '=' та '|', а НЕ дефіси. Причина суто технічна, але на ній легко
+     застрягти: у XML коментар не може містити ДВА ДЕФІСИ ПОСПІЛЬ.
+     Тому звична табличка, намальована дефісами, зробить файл невалідним,
+     і Odoo видасть незрозуміле:
+         XMLSyntaxError: Double hyphen within comment
+
+     Це вже друга така помилка в нашому проєкті (перша була в
+     techdistrib_base/views/res_partner_views.xml). І найкумедніше:
+     коли я писав це пояснення, я ДВІЧІ припустився тієї самої помилки —
+     написав подвійний дефіс у самому тексті попередження про нього.
+
+     Мораль: перевіряй XML автоматично, а не оком. Скрипт перевірки
+     наведено в README, розділ «Корисні команди».
+
+     Кожен рядок автоматично створює правило product.pricelist.item
+     у прайс-листі відповідного рівня (див. models/discount_matrix.py).
+
+     noupdate="1": бізнес редагує знижки під ринок. Оновлення модуля
+     НЕ має повертати початкові відсотки — інакше одного разу ціни
+     «стрибнуть» назад, і ніхто не зрозуміє чому.
+     ========================================================================= -->
+<odoo noupdate="1">
+
+    <!-- ===================== BRONZE ===================== -->
+    <record id="matrix_bronze_servers" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_bronze"/>
+        <field name="categ_id" ref="product_category_servers"/>
+        <field name="discount">5.0</field>
+    </record>
+    <record id="matrix_bronze_network" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_bronze"/>
+        <field name="categ_id" ref="product_category_network"/>
+        <field name="discount">7.0</field>
+    </record>
+    <record id="matrix_bronze_iot" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_bronze"/>
+        <field name="categ_id" ref="product_category_iot"/>
+        <field name="discount">6.0</field>
+    </record>
+    <record id="matrix_bronze_accessories" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_bronze"/>
+        <field name="categ_id" ref="product_category_accessories"/>
+        <field name="discount">10.0</field>
+    </record>
+
+    <!-- ===================== SILVER ===================== -->
+    <record id="matrix_silver_servers" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_silver"/>
+        <field name="categ_id" ref="product_category_servers"/>
+        <field name="discount">10.0</field>
+    </record>
+    <record id="matrix_silver_network" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_silver"/>
+        <field name="categ_id" ref="product_category_network"/>
+        <field name="discount">12.0</field>
+    </record>
+    <record id="matrix_silver_iot" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_silver"/>
+        <field name="categ_id" ref="product_category_iot"/>
+        <field name="discount">11.0</field>
+    </record>
+    <record id="matrix_silver_accessories" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_silver"/>
+        <field name="categ_id" ref="product_category_accessories"/>
+        <field name="discount">15.0</field>
+    </record>
+
+    <!-- ===================== GOLD ===================== -->
+    <record id="matrix_gold_servers" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_gold"/>
+        <field name="categ_id" ref="product_category_servers"/>
+        <field name="discount">16.0</field>
+    </record>
+    <record id="matrix_gold_network" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_gold"/>
+        <field name="categ_id" ref="product_category_network"/>
+        <field name="discount">18.0</field>
+    </record>
+    <record id="matrix_gold_iot" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_gold"/>
+        <field name="categ_id" ref="product_category_iot"/>
+        <field name="discount">17.0</field>
+    </record>
+    <record id="matrix_gold_accessories" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_gold"/>
+        <field name="categ_id" ref="product_category_accessories"/>
+        <field name="discount">22.0</field>
+    </record>
+
+    <!-- ===================== PLATINUM ===================== -->
+    <record id="matrix_platinum_servers" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_platinum"/>
+        <field name="categ_id" ref="product_category_servers"/>
+        <field name="discount">22.0</field>
+    </record>
+    <record id="matrix_platinum_network" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_platinum"/>
+        <field name="categ_id" ref="product_category_network"/>
+        <field name="discount">25.0</field>
+    </record>
+    <record id="matrix_platinum_iot" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_platinum"/>
+        <field name="categ_id" ref="product_category_iot"/>
+        <field name="discount">24.0</field>
+    </record>
+    <record id="matrix_platinum_accessories" model="techdistrib.discount.matrix">
+        <field name="tier_id" ref="techdistrib_base.dealer_tier_platinum"/>
+        <field name="categ_id" ref="product_category_accessories"/>
+        <field name="discount">30.0</field>
+    </record>
+
+    <!-- =====================================================================
+         Ліміти ручних знижок (FR-B04)
+
+         ⚠️ Це <function>, а не <record>, і ось чому.
+
+         Рівні створює модуль techdistrib_base з noupdate="1". Отже, Odoo
+         БІЛЬШЕ НЕ ОНОВЛЮЄ ці записи з data-файлів — щоб правки бізнесу
+         не затирались при оновленні модуля.
+
+         Тому звичайний <record id="techdistrib_base.dealer_tier_gold">
+         з полем max_manual_discount ПРОСТО НЕ ЗАСТОСУВАВСЯ Б:
+         Odoo побачив би, що запис позначений noupdate, і пропустив оновлення.
+
+         <function> викликає Python-метод ПОЗА цим механізмом.
+         Метод _setup_default_discount_limits ідемпотентний: він ставить
+         ліміт лише якщо той ще нульовий, тож повторне оновлення модуля
+         не загубить налаштувань адміністратора.
+         ===================================================================== -->
+    <function model="techdistrib.dealer.tier"
+              name="_setup_default_discount_limits"/>
+
+</odoo>

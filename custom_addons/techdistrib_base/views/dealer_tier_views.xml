@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Подання для довідника рівнів дилерів
+     =========================================================================
+     Що таке «подання» (view):
+     Це XML-опис того, ЯК показати модель. Одна модель може мати багато
+     подань: список, форма, канбан, пошук, графік, календар.
+
+     Три типи, які є майже завжди:
+       <list>   — таблиця (у Odoo ≤16 називалась <tree>!)
+       <form>   — картка запису
+       <search> — панель фільтрів і групування над списком
+
+     Кожне подання — це запис моделі ir.ui.view. Щоб його побачив
+     користувач, потрібна ще ДІЯ (ir.actions.act_window), яка каже
+     «відкрий модель X у поданнях Y».
+     ========================================================================= -->
+<odoo>
+
+    <!-- =====================================================================
+         СПИСОК рівнів
+         ===================================================================== -->
+    <record id="view_techdistrib_dealer_tier_list" model="ir.ui.view">
+        <field name="name">techdistrib.dealer.tier.list</field>
+        <field name="model">techdistrib.dealer.tier</field>
+        <field name="arch" type="xml">
+            <!-- editable="top" дозволяє редагувати прямо в таблиці,
+                 без відкриття форми. Для довідників це дуже зручно. -->
+            <list string="Рівні партнерів" editable="top">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="min_annual_revenue" widget="monetary"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="partner_count"/>
+                <field name="active" invisible="1"/>
+            </list>
+            <!--
+              widget="handle" — «ручка» для перетягування рядків мишею.
+              Працює ЛИШЕ якщо в моделі є поле sequence і список editable.
+
+              column_invisible="True" — приховує колонку, але поле
+              залишається завантаженим у браузер. Це потрібно для
+              технічних полів (валюта для monetary, active для фільтрації).
+
+              ⚠️ Це НЕ те саме, що invisible="1":
+                 column_invisible — прибирає колонку з таблиці;
+                 invisible        — приховує поле всередині форми.
+                 Переплутаєш — отримаєш незрозумілу помилку валідації.
+            -->
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ФОРМА рівня
+         ===================================================================== -->
+    <record id="view_techdistrib_dealer_tier_form" model="ir.ui.view">
+        <field name="name">techdistrib.dealer.tier.form</field>
+        <field name="model">techdistrib.dealer.tier</field>
+        <field name="arch" type="xml">
+            <form string="Рівень партнера">
+                <sheet>
+                    <!-- Кнопка-лічильник у «коробці кнопок» форми -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_partners"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-users"
+                                invisible="partner_count == 0">
+                            <field name="partner_count" widget="statinfo"
+                                   string="Дилерів"/>
+                        </button>
+                    </div>
+
+                    <!-- widget="web_ribbon" малює стрічку в куті картки.
+                         Класична ідіома для архівованих записів. -->
+                    <widget name="web_ribbon" title="Архів"
+                            bg_color="text-bg-danger"
+                            invisible="active"/>
+
+                    <div class="oe_title">
+                        <label for="name" string="Назва рівня"/>
+                        <h1><field name="name" placeholder="Напр. Gold"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Параметри">
+                            <field name="code" placeholder="напр. gold"/>
+                            <field name="sequence"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group string="Фінансові умови">
+                            <field name="min_annual_revenue" widget="monetary"/>
+                            <field name="currency_id"
+                                   groups="base.group_multi_currency"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Умови рівня" name="description">
+                            <field name="description" placeholder="Опишіть умови участі..."/>
+                        </page>
+                        <page string="Дилери" name="partners">
+                            <field name="partner_ids">
+                                <list string="Дилер">
+                                    <field name="dealer_code"/>
+                                    <field name="name"/>
+                                    <field name="dealer_status" widget="badge"/>
+                                    <field name="last_sale_date"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ПОШУК
+         ===================================================================== -->
+    <record id="view_techdistrib_dealer_tier_search" model="ir.ui.view">
+        <field name="name">techdistrib.dealer.tier.search</field>
+        <field name="model">techdistrib.dealer.tier</field>
+        <field name="arch" type="xml">
+            <search string="Пошук рівня">
+                <field name="name" string="Рівень"/>
+                <field name="code"/>
+                <filter name="filter_active" string="Архівовані"
+                        domain="[('active', '=', False)]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_active" string="Активні"
+                            context="{'group_by': 'active'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ДІЯ — «що відкрити при кліку на меню»
+         ===================================================================== -->
+    <record id="action_techdistrib_dealer_tier" model="ir.actions.act_window">
+        <field name="name">Рівні партнерів</field>
+        <field name="res_model">techdistrib.dealer.tier</field>
+        <!-- view_mode — перелік подань, доступних у цій дії, через кому.
+             Перше — те, що відкриється за замовчуванням. -->
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Створіть перший рівень партнерства
+            </p>
+            <p>
+                Рівні визначають умови співпраці з дилерами: мінімальний
+                оборот і (у наступних модулях) розмір знижок.
+            </p>
+        </field>
+    </record>
+
+</odoo>

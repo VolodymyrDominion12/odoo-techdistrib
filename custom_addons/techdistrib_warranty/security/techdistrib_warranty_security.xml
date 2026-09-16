@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Безпека модуля гарантії
+     =========================================================================
+     Нових груп не створюємо — перевикористовуємо групи дилерської програми.
+
+     Тут додаємо ОДНЕ правило записів, яке демонструє інший, ніж у
+     Модулі 2, сценарій використання ir.rule: обмеження за ВІДПОВІДАЛЬНИМ,
+     а не за автором.
+
+     Це важлива різниця:
+        Модуль 2 (кредит):  менеджер бачить лише СВОЇ ЗАПИТИ (requested_by)
+        Модуль 4 (гарантія): інженер бачить лише СВОЇ ЗВЕРНЕННЯ (user_id)
+
+     Але є нюанс, який робить це правило безпечнішим: ми не обмежуємо
+     ЧИТАННЯ. Серійний номер має бути видимий усім — інакше неможливо
+     перевірити, чи звертався вже клієнт із цим приладом.
+     Обмежуємо лише ЗМІНУ: редагувати звернення може його відповідальний,
+     а не будь-хто.
+     ========================================================================= -->
+<odoo>
+
+    <record id="rule_warranty_claim_edit_own" model="ir.rule">
+        <field name="name">Гарантія: редагувати може відповідальний або керівник</field>
+        <field name="model_id" ref="model_techdistrib_warranty_claim"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <!-- Застосовуємо лише до звичайних користувачів дилерської програми.
+             Керівник має власне дозвільне правило нижче. -->
+        <field name="groups" eval="[(4, ref('techdistrib_base.group_dealer_user'))]"/>
+        <!-- perm_read = False: ЧИТАННЯ НЕ ОБМЕЖУЄМО.
+             Це свідоме рішення (див. коментар угорі). -->
+        <field name="perm_read" eval="False"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+    <!-- Дозвільне правило для керівників — той самий патерн, що в Модулі 2.
+         Без нього керівник (який теж входить у group_dealer_user через
+         implied_ids) не зміг би редагувати чужі звернення. -->
+    <record id="rule_warranty_claim_manager_all" model="ir.rule">
+        <field name="name">Гарантія: керівник редагує всі</field>
+        <field name="model_id" ref="model_techdistrib_warranty_claim"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+        <field name="groups" eval="[(4, ref('techdistrib_base.group_dealer_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+    </record>
+
+</odoo>

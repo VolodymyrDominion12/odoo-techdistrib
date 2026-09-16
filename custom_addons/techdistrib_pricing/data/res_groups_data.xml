@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Увімкнення стандартної функції Odoo «Discounts» (знижки в рядках)
+     =========================================================================
+     ⚠️ БЕЗ ЦЬОГО ФАЙЛУ МОДУЛЬ НЕ ПРАЦЮВАВ БИ. Пояснюю чому.
+
+     У коді Odoo є метод (addons/product/models/product_pricelist_item.py):
+
+         def _is_discount_feature_enabled(self):
+             superuser = self.env['res.users'].browse(SUPERUSER_ID)
+             return superuser.has_group('sale.group_discount_per_so_line')
+
+         def _show_discount(self):
+             return self._is_discount_feature_enabled() and self.compute_price == 'percentage'
+
+     А обчислення знижки в рядку замовлення
+     (addons/sale/models/sale_order_line.py, метод _compute_discount)
+     починається так:
+
+         discount_enabled = self.env['product.pricelist.item']._is_discount_feature_enabled()
+         ...
+         if not (line.order_id.pricelist_id and discount_enabled):
+             continue          # ← знижка НЕ буде порахована взагалі
+
+     Тобто якщо функцію «Discounts» вимкнено, Odoo ПРОІГНОРУЄ відсоткове
+     правило прайс-листа в полі discount. Ціна в рядку все одно стане
+     правильною (Odoo застосує знижку до ціни), але поле discount
+     лишиться нулем.
+
+     Наслідки для нас:
+       * менеджер не побачить, яку знижку отримав дилер;
+       * FR-B04/B05 (контроль ручної знижки) стане неможливим —
+         контролювати нічого;
+       * звіти про надані знижки покажуть нулі.
+
+     Як це вмикається «по-справжньому»: у Налаштуваннях → Продажі є
+     перемикач «Discounts». Під капотом він додає групу
+     sale.group_discount_per_so_line до групи «Internal User».
+
+     Ми робимо те саме програмно — щоб модуль працював одразу після
+     встановлення. Це той самий підхід, що й у Модулі 2 з
+     account_use_credit_limit, і з тими самими застереженнями:
+     при видаленні модуля налаштування не відкотиться.
+     ========================================================================= -->
+<odoo>
+
+    <record id="base.group_user" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('sale.group_discount_per_so_line'))]"/>
+    </record>
+
+</odoo>

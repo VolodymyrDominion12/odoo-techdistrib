@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Розширення СТАНДАРТНИХ подань партнера (view inheritance)
+     =========================================================================
+     Це друга половина наслідування. Модель ми розширили в Python,
+     тепер треба показати нові поля в інтерфейсі.
+
+     ЯК ПРАЦЮЄ НАСЛІДУВАННЯ ПОДАНЬ:
+     Odoo НЕ замінює стандартне подання, а НАКЛАДАЄ наше поверх нього.
+     У момент відкриття форми Odoo:
+        1. бере arch базового подання (base.view_partner_form);
+        2. по черзі застосовує всі подання-спадкоємці, відсортовані за priority;
+        3. у кожному спадкоємці виконує інструкції <xpath>/<field position=...>;
+        4. віддає браузеру вже злитий XML.
+
+     Головний інструмент — <xpath expr="..." position="...">:
+
+       position="inside"  — вставити ВСЕРЕДИНУ знайденого елемента
+       position="after"   — одразу ПІСЛЯ знайденого елемента
+       position="before"  — одразу ПЕРЕД
+       position="replace" — замінити знайдений елемент (небезпечно!)
+       position="attributes" — змінити атрибути елемента, не чіпаючи вміст
+
+     Як знайти потрібний xpath — практичний рецепт:
+       1. увімкни режим розробника (Налаштування → Активація режиму розробника);
+       2. відкрий потрібну форму;
+       3. натисни іконку 🐞 → «View Metadata» (або «Edit View: Form»);
+       4. ти побачиш фінальний XML. Шукай у ньому name= або field name= —
+          це і є твої «якорі» для xpath.
+
+     ⚠️ УРОК, ЯКИЙ Я ОТРИМАВ, ПИШУЧИ ЦЕЙ ФАЙЛ (реальний випадок):
+     Спочатку я написав для фільтрів якір //filter[@name='salesperson']
+     з position="after" — і це було ПОМИЛКОЮ. Бо у стандартному пошуку
+     партнера фільтр 'salesperson' лежить не серед звичайних фільтрів,
+     а ВСЕРЕДИНІ групи <group name="group_by">. Мій xpath вставив би
+     фільтри туда, де мають бути групування, і вони поводились би як
+     «згрупувати за», а не «відфільтрувати».
+
+     Мораль: ПЕРШ НІЖ писати xpath — прочитай реальний XML подання.
+     Файл base-подання партнера лежить тут:
+         vendor/odoo/odoo/addons/base/views/res_partner_views.xml
+     ========================================================================= -->
+<odoo>
+
+    <!-- =====================================================================
+         1. ФОРМА партнера: блок «Дилерська програма»
+         ===================================================================== -->
+    <record id="view_partner_form_techdistrib" model="ir.ui.view">
+        <field name="name">res.partner.form.techdistrib</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Smart-кнопка в «коробці кнопок».
+                 Стандартна ідіома Odoo: кнопка з лічильником, яка веде
+                 до пов'язаних записів. Клас oe_stat_button + widget statinfo
+                 дають той самий вигляд, що в стандартних кнопках Odoo. -->
+            <div name="button_box" position="inside">
+                <button name="action_view_dealer_orders"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-shopping-cart"
+                        invisible="not is_dealer">
+                    <field name="dealer_open_order_count"
+                           widget="statinfo"
+                           string="Замовлення"/>
+                </button>
+            </div>
+
+            <!-- Один блок вставляємо в СТАНДАРТНУ сторінку.
+                 Ми не створюємо нову вкладку, а додаємо поля поруч зі
+                 знижкою та менеджером — там, де менеджер і шукатиме.
+                 Менше кліків — кращий UX.
+
+                 ⚠️ ВАЖЛИВО: усі інструкції, які вставляють вміст в ОДИН
+                 і той самий елемент, краще писати в ОДНОМУ блоці.
+                 Два окремі <page name="sales_purchases" position="inside">
+                 формально працюють, але важче читаються й легше ламаються. -->
+            <page name="sales_purchases" position="inside">
+                <group name="techdistrib_dealer" string="Дилерська програма">
+                    <!-- Галочку видно ЗАВЖДИ — інакше неможливо зробити
+                         партнера дилером, бо решта полів прихована. -->
+                    <field name="is_dealer"/>
+
+                    <!-- invisible="not is_dealer" — це Python-вираз,
+                         який обчислюється на клієнті для кожного запису.
+                         В Odoo 16 і старіших тут було attrs="{...}".
+                         attrs ВИДАЛЕНО в Odoo 17+ — якщо скопіюєш старий
+                         приклад із мережі, отримаєш помилку валідації. -->
+                    <field name="dealer_code" invisible="not is_dealer"/>
+                    <field name="dealer_tier_id" invisible="not is_dealer"/>
+                    <field name="dealer_since" invisible="not is_dealer"/>
+                    <field name="dealer_status"
+                           widget="badge"
+                           invisible="not is_dealer"
+                           decoration-success="dealer_status == 'active'"
+                           decoration-info="dealer_status == 'new'"
+                           decoration-warning="dealer_status == 'dormant'"/>
+                    <field name="dealer_experience_months"
+                           invisible="not is_dealer"
+                           string="Стаж (міс.)"/>
+
+                    <!-- Грошова сума. options="{'currency_field': 'currency_id'}"
+                         — саме так це зроблено в стандартному модулі account.
+                         Сам currency_id ми в подання НЕ додаємо: його вже
+                         додав модуль account, і повторне додавання поля
+                         викличе помилку «Field is already present in view». -->
+                    <field name="dealer_confirmed_sales"
+                           widget="monetary"
+                           options="{'currency_field': 'currency_id'}"
+                           invisible="not is_dealer"/>
+                    <field name="dealer_confirmed_order_count"
+                           invisible="not is_dealer"/>
+                    <field name="last_sale_date" invisible="not is_dealer"/>
+                </group>
+
+                <!-- Кнопка «Зробити дилером»: показуємо ЛИШЕ тим, хто ще
+                     не дилер — інтерфейс сам підказує наступну дію.
+                     Це принцип «прогресивного розкриття». -->
+                <div name="techdistrib_make_dealer" invisible="is_dealer">
+                    <button name="action_make_dealer"
+                            type="object"
+                            string="Зробити дилером"
+                            class="btn btn-link"
+                            icon="fa-handshake-o"/>
+                </div>
+            </page>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         2. СПИСОК партнерів: колонки дилера
+         =====================================================================
+         optional="hide" означає: колонка доступна через меню вибору
+         стовпців, але типово прихована. Це ВВІЧЛИВО щодо решти користувачів:
+         наші колонки не заважають тим, хто працює зі звичайними клієнтами.
+         ===================================================================== -->
+    <record id="view_partner_tree_techdistrib" model="ir.ui.view">
+        <field name="name">res.partner.list.techdistrib</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <!-- Якір //list тут однозначний: у списку партнерів немає
+                 вкладених списків, тому position="inside" допише наші
+                 колонки в кінець таблиці. -->
+            <xpath expr="//list" position="inside">
+                <field name="dealer_code" optional="hide" readonly="1"/>
+                <field name="dealer_tier_id" optional="hide"/>
+                <field name="dealer_status" optional="hide" widget="badge"
+                       decoration-success="dealer_status == 'active'"
+                       decoration-info="dealer_status == 'new'"
+                       decoration-warning="dealer_status == 'dormant'"/>
+                <field name="last_sale_date" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         3. ПОШУК партнерів: фільтри та групування
+         =====================================================================
+         ⚠️ Тут найважливіший приклад того, чому треба читати базовий XML.
+         У стандартному пошуку партнера структура така:
+
+             <search string="Search Partner">
+                 <field name="name"/> ... <field name="user_id"/>
+                 <separator/>
+                 <filter name="type_person"/> <filter name="type_company"/>
+                 <separator/>
+                 <filter name="inactive"/>            ← звичайний фільтр
+                 <separator/>
+                 <group name="group_by" string="Group By">
+                     <filter name="salesperson" .../>  ← ЦЕ ГРУПУВАННЯ!
+                     <filter name="group_company" .../>
+                     <filter name="group_country" .../>
+                 </group>
+             </search>
+
+         Тому:
+           * звичайні ФІЛЬТРИ вставляємо після фільтра 'inactive';
+           * ГРУПУВАННЯ — усередину групи 'group_by'.
+         ===================================================================== -->
+    <record id="view_res_partner_filter_techdistrib" model="ir.ui.view">
+        <field name="name">res.partner.search.techdistrib</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+
+            <!-- Нове поле для пошуку. filter_domain можна не задавати:
+                 для Char-поля Odoo типово використає ilike. -->
+            <xpath expr="//field[@name='user_id']" position="after">
+                <field name="dealer_code" string="Код дилера"/>
+            </xpath>
+
+            <!-- Звичайні фільтри. domain — це список умов у синтаксисі Odoo,
+                 який виглядає як Python-список кортежів. Це не випадково:
+                 у Python-коді домени пишуться точно так само. -->
+            <xpath expr="//filter[@name='inactive']" position="after">
+                <filter name="filter_is_dealer" string="Дилер"
+                        domain="[('is_dealer', '=', True)]"/>
+                <separator/>
+                <filter name="filter_dealer_dormant" string="Сплячі дилери"
+                        domain="[('is_dealer', '=', True),
+                                ('dealer_status', '=', 'dormant')]"/>
+            </xpath>
+
+            <!-- Групування: domain порожній, а групування задається
+                 через context з ключем 'group_by'.
+                 Це стандартний механізм Odoo: домен фільтрує, контекст групує. -->
+            <xpath expr="//group[@name='group_by']" position="inside">
+                <filter name="group_dealer_tier" string="Рівень партнера"
+                        context="{'group_by': 'dealer_tier_id'}"/>
+                <filter name="group_dealer_status" string="Статус дилера"
+                        context="{'group_by': 'dealer_status'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         4. ДІЯ: список лише дилерів (окреме меню)
+         ===================================================================== -->
+    <record id="action_techdistrib_dealers" model="ir.actions.act_window">
+        <field name="name">Дилери</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">list,kanban,form</field>
+        <!-- domain — базова фільтрація. Користувач не може її зняти:
+             він бачить лише підмножину, визначену тут. -->
+        <field name="domain">[('is_dealer', '=', True)]</field>
+        <!-- context з префіксом default_ підставляє значення при СТВОРЕННІ
+             нового запису через цю дію. Тобто дилер, створений із цього меню,
+             одразу буде позначений галочкою. -->
+        <field name="context">{'default_is_dealer': True}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Додайте першого дилера
+            </p>
+            <p>
+                Дилер — це B2B-партнер із власним рівнем у партнерській програмі
+                та (у наступних модулях) кредитним лімітом і матрицею знижок.
+            </p>
+        </field>
+    </record>
+
+</odoo>

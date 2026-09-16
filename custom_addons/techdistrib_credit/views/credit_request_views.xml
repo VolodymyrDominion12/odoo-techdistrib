@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Подання для запитів на кредит
+     =========================================================================
+     Тут зібрані всі основні типи подань Odoo:
+       <list>     — таблиця
+       <form>     — картка
+       <kanban>   — картки-плитки (ідеально для черги на погодження!)
+       <search>   — фільтри й групування
+     ========================================================================= -->
+<odoo>
+
+    <!-- =====================================================================
+         ДІЇ — ОГОЛОШЕНІ ПЕРШИМИ, І ЦЕ ПРИНЦИПОВО
+
+         ⚠️ РЕАЛЬНА ПОМИЛКА, ЯКУ Я ТУТ ЗРОБИВ (і як її читати в логах):
+
+             ValueError: External ID not found in the system:
+                         techdistrib_credit.action_credit_request_from_order
+             ParseError: while parsing .../views/credit_request_views.xml:96
+
+         Причина: у формі запиту я використав посилання на дію
+             <button name="%(action_credit_request_from_order)d" type="action">
+         але сама дія була оголошена НИЖЧЕ в тому ж файлі.
+
+         Odoo читає data-файли СТРОГО згори вниз і резолвить посилання
+         %(xml_id)d ОДРАЗУ. Тому на момент розбору форми дії ще не існувало.
+
+         ПРАВИЛО ПОРЯДКУ ВСЕРЕДИНІ ФАЙЛУ:
+             1) дії (ir.actions.*)
+             2) подання (ir.ui.view) — бо вони можуть посилатись на дії
+             3) меню (menuitem) — бо вони посилаються на дії
+
+         Те саме стосується посилань на групи, послідовності та будь-які
+         інші записи: спочатку оголоси — потім посилайся.
+         ===================================================================== -->
+
+    <record id="action_credit_request_from_order" model="ir.actions.act_window">
+        <field name="name">Замовлення</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">form</field>
+    </record>
+
+    <record id="action_credit_request" model="ir.actions.act_window">
+        <field name="name">Запити на кредит</field>
+        <field name="res_model">techdistrib.credit.request</field>
+        <field name="view_mode">list,kanban,form</field>
+        <!-- search_default_filter_pending=1 автоматично «натискає» фільтр
+             «На погодженні» при відкритті. Контролер одразу бачить
+             свою чергу роботи, а не всю історію. -->
+        <field name="context">{'search_default_filter_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Усі кредитні ліміти в нормі
+            </p>
+            <p>
+                Тут зʼявляються запити від менеджерів, коли сума замовлення
+                перевищує кредитний ліміт дилера.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_credit_request_all" model="ir.actions.act_window">
+        <field name="name">Усі запити</field>
+        <field name="res_model">techdistrib.credit.request</field>
+        <field name="view_mode">list,kanban,form</field>
+    </record>
+
+    <!-- =====================================================================
+         СПИСОК
+         ===================================================================== -->
+    <record id="view_credit_request_list" model="ir.ui.view">
+        <field name="name">techdistrib.credit.request.list</field>
+        <field name="model">techdistrib.credit.request</field>
+        <field name="arch" type="xml">
+            <!-- decoration-* на <list> фарбує ВЕСЬ рядок залежно від умови.
+                 Це найшвидший спосіб дати окомірну підказку: червоне —
+                 проблема, зелене — все гаразд. -->
+            <list string="Запити на кредит"
+                  decoration-danger="state == 'rejected'"
+                  decoration-success="state == 'approved'"
+                  decoration-warning="state == 'pending'"
+                  decoration-muted="state in ('expired', 'cancelled')">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="sale_order_id"/>
+                <field name="order_amount" widget="monetary" sum="Сума замовлень"/>
+                <field name="credit_limit" widget="monetary"/>
+                <field name="current_debt" widget="monetary"/>
+                <field name="excess_amount" widget="monetary"
+                       sum="Разом перевищення"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="state" widget="badge"
+                       decoration-danger="state == 'rejected'"
+                       decoration-success="state == 'approved'"
+                       decoration-warning="state == 'pending'"
+                       decoration-muted="state in ('expired', 'cancelled')"/>
+                <field name="requested_by" widget="many2one_avatar_user" optional="show"/>
+                <field name="decided_by" widget="many2one_avatar_user" optional="hide"/>
+                <field name="valid_until" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="create_date" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         КАНБАН — черга на погодження
+         =====================================================================
+         Канбан тут не «для краси»: це найзручніший інтерфейс для
+         черги рішень. Контролер бачить три колонки й одразу розуміє
+         обсяг роботи.
+         ===================================================================== -->
+    <record id="view_credit_request_kanban" model="ir.ui.view">
+        <field name="name">techdistrib.credit.request.kanban</field>
+        <field name="model">techdistrib.credit.request</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column"
+                    sample="1">
+                <field name="currency_id"/>
+                <field name="state"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex justify-content-between mb-1">
+                            <field name="name" class="fw-bold"/>
+                            <field name="order_amount" widget="monetary"/>
+                        </div>
+                        <field name="partner_id"/>
+                        <div class="text-muted mt-1">
+                            <field name="sale_order_id"/>
+                        </div>
+                        <!-- t-if — умовний рендеринг у QWeb-шаблоні.
+                             record.X.raw_value — «сире» значення поля. -->
+                        <div t-if="record.excess_amount.raw_value > 0"
+                             class="text-danger mt-1">
+                            Перевищення:
+                            <field name="excess_amount" widget="monetary"/>
+                        </div>
+                        <footer>
+                            <field name="requested_by" widget="many2one_avatar_user"/>
+                            <field name="valid_until" t-if="record.valid_until.raw_value" widget="remaining_days"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ФОРМА
+         ===================================================================== -->
+    <record id="view_credit_request_form" model="ir.ui.view">
+        <field name="name">techdistrib.credit.request.form</field>
+        <field name="model">techdistrib.credit.request</field>
+        <field name="arch" type="xml">
+            <form string="Запит на кредит">
+                <header>
+                    <!-- Кнопки у header змінюють видимість залежно від стану.
+                         Це «міні-воркфлоу» на формі — класичний патерн Odoo.
+                         Зверни увагу: ми НЕ ховаємо кнопку для тих, хто не
+                         має прав. Замість цього бізнес-перевірка в коді
+                         дасть зрозуміле пояснення, чому не можна. -->
+                    <button name="action_approve"
+                            type="object"
+                            string="Схвалити"
+                            class="btn-primary"
+                            invisible="state != 'pending'"/>
+                    <button name="action_reject"
+                            type="object"
+                            string="Відхилити"
+                            invisible="state != 'pending'"/>
+                    <button name="action_reset_to_pending"
+                            type="object"
+                            string="Повернути на розгляд"
+                            invisible="state not in ('rejected', 'expired')"/>
+                    <button name="action_cancel"
+                            type="object"
+                            string="Скасувати"
+                            invisible="state in ('approved', 'rejected', 'cancelled')"/>
+
+                    <field name="state" widget="statusbar" statusbar_visible="pending,approved,rejected"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="%(action_credit_request_from_order)d"
+                                type="action"
+                                class="oe_stat_button"
+                                icon="fa-shopping-cart"
+                                invisible="not sale_order_id"
+                                context="{'search_default_id': sale_order_id}">
+                            <span class="o_stat_text">Замовлення</span>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Учасники">
+                            <field name="partner_id"
+                                   options="{'no_create': True}"
+                                   readonly="state != 'pending'"/>
+                            <field name="commercial_partner_id" invisible="1"/>
+                            <field name="sale_order_id"
+                                   options="{'no_create': True}"
+                                   readonly="state != 'pending'"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+
+                        <group string="Суми (знімок на момент запиту)">
+                            <field name="credit_limit" widget="monetary"/>
+                            <field name="current_debt" widget="monetary"/>
+                            <field name="order_amount" widget="monetary"/>
+                            <field name="total_exposure" widget="monetary"/>
+                            <field name="excess_amount" widget="monetary"
+                                   decoration-danger="excess_amount > 0"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group string="Рішення">
+                            <field name="requested_by" readonly="1"/>
+                            <field name="decided_by" readonly="1"/>
+                            <field name="decided_on" readonly="1"/>
+                            <field name="validity_days"
+                                   readonly="state != 'pending'"/>
+                            <field name="valid_until" readonly="1"/>
+                            <field name="is_valid"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Обґрунтування" name="notes">
+                            <group>
+                                <field name="request_note"
+                                       placeholder="Чому ви просите перевищити ліміт?"
+                                       readonly="state != 'pending'"/>
+                                <field name="decision_note"
+                                       placeholder="Обовʼязково для відхилення: вкажіть причину"
+                                       readonly="state in ('cancelled',)"/>
+                            </group>
+                        </page>
+                        <page string="Історія запитів дилера" name="history">
+                            <field name="partner_request_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="create_date"/>
+                                    <field name="order_amount" widget="monetary"/>
+                                    <field name="excess_amount" widget="monetary"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="decided_by"/>
+                                    <field name="decided_on"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <!-- Chatter: історія повідомлень і змін відстежуваних полів.
+                     З'являється автоматично завдяки міксину mail.thread. -->
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- =====================================================================
+         ПОШУК
+         ===================================================================== -->
+    <record id="view_credit_request_search" model="ir.ui.view">
+        <field name="name">techdistrib.credit.request.search</field>
+        <field name="model">techdistrib.credit.request</field>
+        <field name="arch" type="xml">
+            <search string="Пошук запитів">
+                <field name="name" string="Номер"/>
+                <field name="partner_id"/>
+                <field name="sale_order_id"/>
+                <field name="requested_by"/>
+                <separator/>
+                <!-- search_default_* у context дії «натискає» цей фільтр
+                     автоматично при відкритті. Саме так працює
+                     search_default_filter_pending у дії нижче. -->
+                <filter name="filter_pending" string="На погодженні"
+                        domain="[('state', '=', 'pending')]"/>
+                <filter name="filter_approved" string="Схвалені"
+                        domain="[('state', '=', 'approved')]"/>
+                <filter name="filter_valid" string="Дійсні зараз"
+                        domain="[('state', '=', 'approved'), ('valid_until', '&gt;', context_today().strftime('%Y-%m-%d %H:%M:%S'))]"/>
+                <separator/>
+                <filter name="filter_my" string="Мої запити"
+                        domain="[('requested_by', '=', uid)]"/>
+                <separator/>
+                <filter name="filter_excess" string="З перевищенням"
+                        domain="[('excess_amount', '&gt;', 0)]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_state" string="Стан"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Дилер"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_requested_by" string="Хто запросив"
+                            context="{'group_by': 'requested_by'}"/>
+                    <filter name="group_create_date" string="Дата створення"
+                            context="{'group_by': 'create_date:week'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Дії оголошені на початку файлу — див. коментар угорі. -->
+
+
+</odoo>
