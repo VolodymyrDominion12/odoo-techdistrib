@@ -52,6 +52,24 @@ fi
 # --- 3. Робочі директорії ----------------------------------------------------
 mkdir -p "$ROOT/data"
 
+# --- 3.1. wkhtmltopdf для друку PDF ------------------------------------------
+# Odoo шукає цей бінарник звичайним пошуком у PATH
+# (odoo/addons/base/models/ir_actions_report.py:62, find_in_path('wkhtmltopdf')).
+#
+# У цьому середовищі немає sudo, тому поставити пакунок через apt неможливо.
+# Рішення: портативна збірка, розпакована з .deb у vendor/ БЕЗ root —
+# командою `dpkg-deb -x` (вона не потребує прав адміністратора).
+#
+# Якщо тека відсутня — нічого не ламається: Odoo просто не зможе друкувати
+# PDF і попередить про це в логах. Інструкція — в README.
+WKHTML_DIR="$ROOT/vendor/wkhtmltopdf/extracted/usr/local/bin"
+if [[ -x "$WKHTML_DIR/wkhtmltopdf" ]]; then
+    export PATH="$WKHTML_DIR:$PATH"
+    echo "📄 wkhtmltopdf: $("$WKHTML_DIR/wkhtmltopdf" --version 2>/dev/null | head -1)"
+else
+    echo "ℹ️  wkhtmltopdf не знайдено — друк PDF буде недоступний (див. README)."
+fi
+
 # --- 4. Запуск ---------------------------------------------------------------
 # exec замінює процес bash на процес python: сигнали (Ctrl+C) ідуть напряму
 # в Odoo, і він коректно завершується, а не вбивається.

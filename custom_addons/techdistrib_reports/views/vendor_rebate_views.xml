@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Подання ретро-бонусів вендорів
+     ========================================================================= -->
+<odoo>
+
+    <record id="action_vendor_rebate" model="ir.actions.act_window">
+        <field name="name">Ретро-бонуси вендорів</field>
+        <field name="res_model">techdistrib.vendor.rebate</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Нарахувань бонусів немає
+            </p>
+            <p>
+                Тут зʼявляються нарахування ретро-бонусів за квартали.
+                Створюються автоматично для вендорів, у яких на картці
+                вказано відсоток бонусу.
+            </p>
+        </field>
+    </record>
+
+    <record id="view_vendor_rebate_list" model="ir.ui.view">
+        <field name="name">techdistrib.vendor.rebate.list</field>
+        <field name="model">techdistrib.vendor.rebate</field>
+        <field name="arch" type="xml">
+            <list string="Ретро-бонуси"
+                  decoration-success="state == 'received'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <field name="period_label"/>
+                <field name="date_from" optional="hide"/>
+                <field name="date_to" optional="hide"/>
+                <field name="purchase_order_count" optional="hide"/>
+                <field name="purchase_amount" widget="monetary" sum="Разом оборот"/>
+                <field name="rebate_percent" widget="percentage"/>
+                <field name="rebate_amount" widget="monetary" sum="Разом бонусів"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-success="state in ('confirmed', 'invoiced', 'received')"
+                       decoration-muted="state == 'cancelled'"/>
+                <field name="company_id" groups="base.group_multi_company"
+                       column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_vendor_rebate_form" model="ir.ui.view">
+        <field name="name">techdistrib.vendor.rebate.form</field>
+        <field name="model">techdistrib.vendor.rebate</field>
+        <field name="arch" type="xml">
+            <form string="Ретро-бонус вендора">
+                <header>
+                    <button name="action_confirm" type="object"
+                            string="Підтвердити" class="btn-primary"
+                            invisible="state != 'draft'"/>
+                    <button name="action_mark_invoiced" type="object"
+                            string="Виставлено вендору"
+                            invisible="state != 'confirmed'"/>
+                    <button name="action_mark_received" type="object"
+                            string="Отримано" class="btn-primary"
+                            invisible="state != 'invoiced'"/>
+                    <button name="action_recalculate" type="object"
+                            string="Перерахувати"
+                            invisible="state != 'draft'"/>
+                    <button name="action_cancel" type="object"
+                            string="Скасувати"
+                            invisible="state in ('received', 'cancelled')"/>
+                    <button name="action_reset_to_draft" type="object"
+                            string="У чернетку"
+                            invisible="state != 'cancelled'"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,confirmed,invoiced,received"/>
+                </header>
+
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Вендор і період">
+                            <field name="vendor_id"
+                                   options="{'no_create': True}"
+                                   readonly="state != 'draft'"/>
+                            <field name="date_from" readonly="state != 'draft'"/>
+                            <field name="date_to" readonly="state != 'draft'"/>
+                            <field name="period_label" invisible="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Розрахунок">
+                            <field name="purchase_order_count" readonly="1"/>
+                            <field name="purchase_amount" widget="monetary" readonly="1"/>
+                            <field name="rebate_percent" widget="percentage"
+                                   readonly="state != 'draft'"/>
+                            <field name="rebate_amount" widget="monetary" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Примітки" name="notes">
+                            <field name="note" placeholder="Умови нарахування, домовленості..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_vendor_rebate_search" model="ir.ui.view">
+        <field name="name">techdistrib.vendor.rebate.search</field>
+        <field name="model">techdistrib.vendor.rebate</field>
+        <field name="arch" type="xml">
+            <search string="Пошук нарахувань">
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <filter name="filter_draft" string="Чернетки"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_to_receive" string="Очікують отримання"
+                        domain="[('state', 'in', ('confirmed', 'invoiced'))]"/>
+                <group expand="0" string="Групувати за">
+                    <filter name="group_vendor" string="Вендор"
+                            context="{'group_by': 'vendor_id'}"/>
+                    <filter name="group_state" string="Стан"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_date" string="Квартал"
+                            context="{'group_by': 'date_from'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Аналітичне подання: скільки бонусів нараховано по вендорах.
+         Це FR-F04 у вигляді звіту — і жодного рядка Python. -->
+    <record id="view_vendor_rebate_pivot" model="ir.ui.view">
+        <field name="name">techdistrib.vendor.rebate.pivot</field>
+        <field name="model">techdistrib.vendor.rebate</field>
+        <field name="arch" type="xml">
+            <pivot string="Бонуси за вендорами" sample="1">
+                <field name="vendor_id" type="row"/>
+                <field name="date_from" interval="quarter" type="col"/>
+                <field name="purchase_amount" type="measure"/>
+                <field name="rebate_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_vendor_rebate_pivot" model="ir.actions.act_window">
+        <field name="name">Бонуси за вендорами</field>
+        <field name="res_model">techdistrib.vendor.rebate</field>
+        <field name="view_mode">pivot,list,form</field>
+    </record>
+
+</odoo>

@@ -38,6 +38,10 @@ fi
 
 # -d: ім'я тестової бази. Якщо її немає — Odoo створить.
 # Прибираємо суфікс тегу після ':' — модуль потрібен для -i.
+# wkhtmltopdf у PATH — щоб тести друку PDF працювали (див. run_odoo.sh)
+WKHTML_DIR="$ROOT/vendor/wkhtmltopdf/extracted/usr/local/bin"
+[[ -x "$WKHTML_DIR/wkhtmltopdf" ]] && export PATH="$WKHTML_DIR:$PATH"
+
 MODULE="${TAGS%%:*}"
 TEST_DB="${TEST_DB:-techdistrib_test}"
 

@@ -17,3 +17,11 @@ odoo.log
 .idea/
 .vscode/
 .DS_Store
+
+# --- Середовища та кеші інструментів розробки (не наш код) ---
+# .venv-mcp  — ізольоване середовище для Odoo MCP-сервера (див. .agents/skills/odoo-mcp)
+# .venv-lint — середовище лінтерів, яке створює scripts/lint.sh
+# .pylint-cache — кеш pylint (тримаємо в проєкті, щоб не залежати від ~/.cache)
+.venv-mcp/
+.venv-lint/
+.pylint-cache/

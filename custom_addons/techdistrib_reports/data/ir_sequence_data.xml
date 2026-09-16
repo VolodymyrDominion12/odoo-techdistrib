@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Послідовність номерів нарахувань ретро-бонусів
+     ========================================================================= -->
+<odoo noupdate="1">
+
+    <record id="seq_techdistrib_vendor_rebate" model="ir.sequence">
+        <field name="name">Ретро-бонус вендора</field>
+        <field name="code">techdistrib.vendor.rebate</field>
+        <field name="prefix">RB-</field>
+        <field name="padding">5</field>
+        <field name="company_id" eval="False"/>
+        <field name="implementation">standard</field>
+    </record>
+
+</odoo>

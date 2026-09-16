@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     Меню модуля звітів
+     ========================================================================= -->
+<odoo>
+
+    <menuitem id="menu_techdistrib_analytics_root"
+              name="Аналітика та звіти"
+              parent="techdistrib_base.menu_techdistrib_root"
+              sequence="40"/>
+
+    <menuitem id="menu_techdistrib_credit_analysis"
+              name="Кредитні перевищення"
+              parent="menu_techdistrib_analytics_root"
+              action="action_credit_analysis_techdistrib"
+              sequence="10"/>
+
+    <menuitem id="menu_techdistrib_warranty_analysis"
+              name="Гарантійні звернення"
+              parent="menu_techdistrib_analytics_root"
+              action="action_warranty_analysis_techdistrib"
+              sequence="20"/>
+
+    <menuitem id="menu_techdistrib_vendor_rebates"
+              name="Ретро-бонуси вендорів"
+              parent="menu_techdistrib_analytics_root"
+              action="action_vendor_rebate"
+              sequence="30"/>
+
+    <menuitem id="menu_techdistrib_vendor_rebates_pivot"
+              name="Бонуси за вендорами"
+              parent="menu_techdistrib_analytics_root"
+              action="action_vendor_rebate_pivot"
+              sequence="40"/>
+
+</odoo>

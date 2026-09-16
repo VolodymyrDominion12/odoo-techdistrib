@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     FR-G03: ДРУК ГАРАНТІЙНОГО ТАЛОНА (QWeb PDF)
+     =========================================================================
+     Це перший у проєкті ДРУКОВАНИЙ документ, тому розберемо механізм.
+
+     ЯК ПРАЦЮЄ ДРУК В ODOO:
+       1. Є шаблон QWeb (це XML із спеціальними тегами t-if, t-foreach,
+          t-field) — він описує HTML.
+       2. Є запис ir.actions.report, який каже: «для моделі X друкуй
+          шаблон Y у форматі qweb-pdf».
+       3. Коли користувач тисне «Друк», Odoo:
+            a. виконує шаблон і отримує HTML;
+            b. передає HTML зовнішній програмі wkhtmltopdf;
+            c. та конвертує HTML у PDF і віддає файл.
+
+     ⚠️ ЗВІДСИ ВАЖЛИВИЙ НАСЛІДОК: без встановленого wkhtmltopdf друк
+     PDF НЕ ПРАЦЮЄ взагалі. Odoo напише в лог:
+         You need Wkhtmltopdf to print a pdf version of the reports.
+
+     У цьому проєкті wkhtmltopdf встановлено портативно (без root) —
+     див. README, розділ «Технічні деталі середовища».
+
+     СТРУКТУРА ШАБЛОНУ — три рівні вкладеності, і всі три обов'язкові:
+
+         web.html_container     — HTML-обгортка документа
+           web.external_layout  — «шапка» з логотипом і адресою компанії,
+                                  «підвал» із контактами, нумерація сторінок
+             <div class="page"> — власне вміст документа
+
+     Клас "page" критичний: саме він позначає межі сторінки для
+     wkhtmltopdf. Без нього весь документ стиснеться в одну довгу смугу.
+     ========================================================================= -->
+<odoo>
+
+    <!-- =====================================================================
+         ШАБЛОН
+         ===================================================================== -->
+    <template id="report_warranty_certificate_document">
+        <t t-call="web.html_container">
+            <!-- docs — це recordset документів, для яких друкують звіт.
+                 t-foreach дає змогу надрукувати кілька звернень одразу
+                 (напр., виділити 10 у списку й натиснути «Друк»). -->
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2 class="text-center mb-4">ГАРАНТІЙНИЙ ТАЛОН</h2>
+
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <strong>Номер звернення:</strong>
+                                <span t-field="o.name"/><br/>
+                                <strong>Дата звернення:</strong>
+                                <span t-field="o.reported_date"/><br/>
+                                <strong>Серійний номер:</strong>
+                                <span t-field="o.lot_id.name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Власник:</strong>
+                                <span t-field="o.partner_id.name"/><br/>
+                                <strong>Продано:</strong>
+                                <span t-field="o.sold_to_partner_id.name"/><br/>
+                                <strong>Дата продажу:</strong>
+                                <span t-field="o.delivery_date"/>
+                            </div>
+                        </div>
+
+                        <!--
+                          ТАБЛИЦЯ ОБЛАДНАННЯ.
+                          Зверни увагу: ми виводимо СЕРІЙНИЙ НОМЕР окремим
+                          рядком, а не лише назву товару. Саме він робить
+                          цей документ доказом — за ним вендор ідентифікує
+                          конкретну одиницю.
+                        -->
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Товар</th>
+                                    <th>Серійний номер</th>
+                                    <th class="text-end">Гарантія з</th>
+                                    <th class="text-end">Гарантія по</th>
+                                    <th class="text-end">Термін</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span t-field="o.product_id.display_name"/></td>
+                                    <td><span t-field="o.lot_id.name"/></td>
+                                    <td class="text-end"><span t-field="o.warranty_start_date"/></td>
+                                    <td class="text-end"><span t-field="o.warranty_end_date"/></td>
+                                    <td class="text-end">
+                                        <span t-field="o.warranty_months"/> міс.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!--
+                          СТАТУС ГАРАНТІЇ.
+                          Замість того щоб писати «дійсна»/«не дійсна»
+                          текстом, ми виводимо ГОТОВИЙ рядок із
+                          обчислюваного поля warranty_check_note, яке
+                          вже містить дату закінчення й кількість днів.
+
+                          Це принцип «одне джерело істини»: логіка
+                          пояснення живе в моделі, а не дублюється
+                          в шаблоні друку. Інакше при зміні правил
+                          довелося б правити і код, і шаблон.
+                        -->
+                        <div class="alert alert-info mt-3" role="alert">
+                            <strong>Результат перевірки гарантії:</strong>
+                            <span t-field="o.warranty_check_note"/>
+                        </div>
+
+                        <h5 class="mt-4">Опис несправності</h5>
+                        <p t-field="o.problem_description"/>
+
+                        <t t-if="o.diagnosis">
+                            <h5 class="mt-3">Результат діагностики</h5>
+                            <p t-field="o.diagnosis"/>
+                        </t>
+
+                        <t t-if="o.resolution">
+                            <h5 class="mt-3">Рішення за зверненням</h5>
+                            <p>
+                                <span t-field="o.resolution"/>
+                                <t t-if="o.resolution_note">
+                                    — <span t-field="o.resolution_note"/>
+                                </t>
+                            </p>
+                            <t t-if="o.is_chargeable">
+                                <p>
+                                    <strong>Вартість ремонту:</strong>
+                                    <span t-field="o.repair_cost"
+                                          t-options='{"widget": "monetary", "display_currency": o.currency_id}'/>
+                                </p>
+                            </t>
+                        </t>
+
+                        <!-- Підписи сторін.
+                             Використовуємо готовий блок із базового
+                             шаблону Odoo, щоб вигляд збігався зі
+                             стандартними документами. -->
+                        <div class="row mt-5 pt-4">
+                            <div class="col-6">
+                                <p class="border-top pt-2">Прийняв (сервісний інженер)</p>
+                            </div>
+                            <div class="col-6">
+                                <p class="border-top pt-2">Здав (клієнт)</p>
+                            </div>
+                        </div>
+
+                        <p class="text-muted small mt-4">
+                            Цей талон засвідчує, що обладнання із зазначеним
+                            серійним номером було придбане в нашій компанії,
+                            і містить інформацію про гарантійні зобов'язання.
+                            Будь ласка, зберігайте його протягом усього
+                            терміну гарантії.
+                        </p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <!-- =====================================================================
+         ДІЯ ДРУКУ
+         =====================================================================
+         Саме цей запис робить шаблон «звітом», який можна викликати
+         з інтерфейсу.
+         ===================================================================== -->
+    <record id="action_report_warranty_certificate" model="ir.actions.report">
+        <field name="name">Гарантійний талон</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="report_type">qweb-pdf</field>
+        <!-- report_name — це XML ID шаблону РАЗОМ із модулем -->
+        <field name="report_name">techdistrib_reports.report_warranty_certificate_document</field>
+        <field name="report_file">techdistrib_reports.report_warranty_certificate_document</field>
+        <!-- print_report_name — ім'я завантажуваного файлу.
+             Це Python-вираз, у якому доступний object (поточний документ). -->
+        <field name="print_report_name">'Гарантійний талон - %s' % (object.name)</field>
+        <!-- binding_* додає пункт «Гарантійний талон» у меню «Друк»
+             на формі та в списку. Без цього звіт існував би, але
+             дістатись до нього можна було б лише через Technical. -->
+        <field name="binding_model_id" ref="techdistrib_warranty.model_techdistrib_warranty_claim"/>
+        <field name="binding_type">report</field>
+    </record>
+
+</odoo>

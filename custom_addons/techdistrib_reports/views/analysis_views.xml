@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =========================================================================
+     АНАЛІТИЧНІ ПОДАННЯ — ЗАКРИВАЮТЬ ВИМОГИ FR-G04, FR-G05 БЕЗ ЖОДНОГО
+     РЯДКА PYTHON.
+     =========================================================================
+     Це головний урок цього файлу.
+
+     Коли бізнес каже «нам потрібен звіт», у 80 % випадків потрібне
+     АНАЛІТИЧНЕ ПОДАННЯ Odoo, а не новий код:
+
+         <graph>  — діаграма (стовпчики, лінії, коло)
+         <pivot>  — зведена таблиця (як Excel-зведені)
+
+     Обидва працюють по БУДЬ-ЯКІЙ наявній моделі: Odoo сам будує запити
+     до бази, групує, підсумовує. Розробнику достатньо вказати, які поля
+     показувати й по чому групувати.
+
+     Якби ми писали ці звіти кодом, довелося б:
+       * робити SQL-агрегації;
+       * будувати форми фільтрів;
+       * реалізовувати експорт в Excel;
+       * підтримувати все це при зміні моделей.
+
+     Подання дають усе це безкоштовно.
+
+     ПРАВИЛО: перш ніж писати звіт — спитай, чи вистачить graph/pivot.
+     ========================================================================= -->
+<odoo>
+
+    <!-- =====================================================================
+         FR-G04: «Стан кредитних лімітів»
+         =====================================================================
+         Питання бізнесу: «скільки перевищень ми схвалюємо і кому?»
+         Відповідь — зведена таблиця по дилерах.
+         ===================================================================== -->
+    <record id="view_credit_request_pivot_techdistrib" model="ir.ui.view">
+        <field name="name">techdistrib.credit.request.pivot.reports</field>
+        <field name="model">techdistrib.credit.request</field>
+        <field name="arch" type="xml">
+            <pivot string="Кредитні перевищення" sample="1">
+                <field name="partner_id" type="row"/>
+                <field name="state" type="col"/>
+                <field name="create_date" interval="month" type="col"/>
+                <!-- type="measure" позначає числові показники, які
+                     підсумовуються. Без цього Odoo підсумує всі числові
+                     поля підряд, і таблиця буде нечитабельною. -->
+                <field name="order_amount" type="measure"/>
+                <field name="excess_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_credit_request_graph_techdistrib" model="ir.ui.view">
+        <field name="name">techdistrib.credit.request.graph.reports</field>
+        <field name="model">techdistrib.credit.request</field>
+        <field name="arch" type="xml">
+            <graph string="Сума перевищень за місяцями" type="bar" sample="1">
+                <field name="create_date" interval="month"/>
+                <field name="excess_amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_credit_analysis_techdistrib" model="ir.actions.act_window">
+        <field name="name">Аналіз кредитних перевищень</field>
+        <field name="res_model">techdistrib.credit.request</field>
+        <field name="view_mode">graph,pivot,list,form</field>
+        <field name="context">{'search_default_group_partner': 1}</field>
+    </record>
+
+    <!-- =====================================================================
+         FR-G05: «Відкриті гарантійні звернення»
+         ===================================================================== -->
+    <record id="view_warranty_claim_pivot_techdistrib" model="ir.ui.view">
+        <field name="name">techdistrib.warranty.claim.pivot.reports</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="arch" type="xml">
+            <pivot string="Гарантійні звернення" sample="1">
+                <field name="product_id" type="row"/>
+                <field name="state" type="col"/>
+                <field name="resolution" type="col"/>
+                <field name="repair_cost" type="measure"/>
+                <field name="vendor_compensation" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_warranty_claim_graph_techdistrib" model="ir.ui.view">
+        <field name="name">techdistrib.warranty.claim.graph.reports</field>
+        <field name="model">techdistrib.warranty.claim</field>
+        <field name="arch" type="xml">
+            <graph string="Гарантійні звернення по товарах" type="bar" sample="1">
+                <field name="product_id"/>
+                <field name="repair_cost" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_warranty_analysis_techdistrib" model="ir.actions.act_window">
+        <field name="name">Аналіз гарантійних звернень</field>
+        <field name="res_model">techdistrib.warranty.claim</field>
+        <field name="view_mode">graph,pivot,list,form</field>
+    </record>
+
+</odoo>

@@ -55,12 +55,15 @@ def report(label, record, was_created):
 # =============================================================================
 print('\n=== 1. Вендори ===')
 
+# Третій елемент — відсоток ретро-бонусу з договору (модуль techdistrib_reports).
+# Для вендора з відсотком > 0 cron автоматично створить нарахування
+# за попередній квартал.
 vendors_data = [
-    ('Dell Technologies', 'US'),
-    ('Cisco Systems', 'US'),
-    ('Advantech', 'TW'),
+    ('Dell Technologies', 'US', 5.0),
+    ('Cisco Systems', 'US', 4.0),
+    ('Advantech', 'TW', 0.0),      # без бонусу — для перевірки, що не створиться
 ]
-for name, country_code in vendors_data:
+for name, country_code, rebate_percent in vendors_data:
     country = env['res.country'].search([('code', '=', country_code)], limit=1)
     vendor, is_new = get_or_create(
         'res.partner',
@@ -68,6 +71,11 @@ for name, country_code in vendors_data:
         {'name': name, 'is_company': True, 'country_id': country.id if country else False,
          'supplier_rank': 1},
     )
+    # Проставляємо відсоток, якщо він ще не заданий — щоб скрипт був
+    # ідемпотентним, але й «доналаштовував» дані, створені раніше
+    # (напр., коли модуль techdistrib_reports встановили пізніше).
+    if rebate_percent and not vendor.vendor_rebate_percent:
+        vendor.vendor_rebate_percent = rebate_percent
     report('Вендор', vendor, is_new)
     created['partners'] += int(is_new)
 
