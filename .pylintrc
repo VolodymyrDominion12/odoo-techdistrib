@@ -24,6 +24,26 @@ py-version=3.12
 jobs=1
 
 [MESSAGES CONTROL]
+; ПРО ПЕРЕВІРКИ Odoo 18, ЯКІ ВАРТО ЗНАТИ:
+;
+; OCA у своєму «обов'язковому» профілі (pylintrc-mandatory) вмикає частину
+; перевірок ЛИШЕ для Odoo >= 19 — зокрема no-search-all, no-write-in-compute,
+; prefer-env-translation, inheritable-method-*, deprecated-name-get,
+; bad-builtin-groupby. Тобто типовий CI OCA на 18.0 їх не ганяє.
+;
+; Нам це не заважає: pylint-odoo 10 вмикає їх за замовчуванням, і перевірено,
+; що на цьому проєкті вони справді працюють (саме так знайдено W8163 і W8120
+; у res_partner.py). Дублювати їх списком `enable=` не потрібно — краще
+; тримати перевірки увімкненими за замовчуванням, а вимикати точково нижче.
+;
+; Якщо колись знадобиться зафіксувати їх явно, ось повний набір із кодами:
+;   E8102 invalid-commit            E8103 sql-injection
+;   E8106 external-request-timeout  E8135 no-write-in-compute
+;   E8146 deprecated-name-get       E8147 inheritable-method-string
+;   E8148 inheritable-method-lambda E8149 deprecated-inselect-operator
+;   W8106 method-required-super     W8113 attribute-string-redundant
+;   W8155 bad-builtin-groupby       W8161 prefer-env-translation
+;   W8163 no-search-all             W8164 super-method-mismatch
 disable=
 
     ; --- Це НЕ модуль OCA, тому вимоги OCA до оформлення не діють ---

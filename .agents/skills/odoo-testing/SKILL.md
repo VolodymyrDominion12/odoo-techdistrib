@@ -88,7 +88,7 @@ class TestWarranty(TransactionCase):
 | **Безбазовий** | арифметика, рішення, політики — чиста логіка | мілісекунди | `tests/test_<service>.py` звичайним `unittest` |
 | **`TransactionCase`** | ORM, computed, constraints, потік документів, права | секунди–хвилини (підняття бази) | `tests/test_<модель>.py` |
 
-**Безбазовий рівень з'явиться лише тоді, коли логіку винесено в `services/`**
+**Безбазовий рівень з'явиться лише тоді, коли логіку винесено в `policy/`**
 без `self.env` (див. скіл `odoo-architecture` §2). Це і є практична користь від
 того винесення: арифметику гарантійних дат можна перевірити 20 кейсами за
 мілісекунди замість 20 запусків тестової бази.
@@ -182,6 +182,64 @@ class TestWarrantyAccess(TransactionCase):
 Правило проєкту: **кожна нова модель отримує тест на доступ** — окрім тесту
 логіки. Без нього дірка в правах лишається невидимою доти, доки хтось не
 спробує нею скористатись.
+
+## 7.1. Форма, кеш і середовище записів — три речі, які легко зробити неправильно
+
+### `Form` — єдиний спосіб протестувати `@api.onchange`
+
+Звичайне присвоєння `record.field = x` **не викликає** `onchange` — ані в тесті,
+ані в скрипті. Для цього в Odoo є серверна реалізація форми,
+`odoo.tests.Form` (`vendor/odoo/odoo/tests/form.py`): вона викликає onchange при
+створенні й на кожне встановлення поля, а також обробляє `default_*`.
+
+У проєкті є `@api.onchange('lot_id')` у `techdistrib_warranty` — і в
+`test_warranty.py` вже правильно зазначено, що покладатись лише на onchange не
+можна. Але щоб перевірити **сам** onchange (наприклад, що він підставляє
+`reported_date`), потрібен саме `Form`:
+
+```python
+from odoo.tests import Form
+
+def test_onchange_fills_dates(self):
+    with Form(self.env['techdistrib.warranty.claim']) as f:
+        f.lot_id = self.lot                     # ← спрацьовує @api.onchange
+        self.assertEqual(f.reported_date, fields.Date.context_today(f.record))
+    claim = f.record                            # збережений запис
+```
+
+Для x2many всередині форми: `with f.order_line.new() as line:` (створити рядок)
+або `with f.order_line.edit(0) as line:` (редагувати наявний).
+
+### Кеш ORM: `flush_all`, `invalidate_model` — і жодного `invalidate_cache`
+
+ORM кешує значення полів, тому щойно записане може не перерахуватись, доки не
+відбудеться flush. У 18.0 API такий:
+
+- `self.env.flush_all()` · `recordset.flush_model()` · `recordset.flush_recordset()`
+- **`recordset.invalidate_model()`** — а `invalidate_cache()` **у 18.0 не існує**.
+  Будь-яка порада його викликати — застаріла.
+
+Обов'язково перед сирим SQL у тесті (інакше читаєш старі рядки) і тоді, коли
+перевіряєш результат «обхідним» шляхом, а не через ORM.
+
+### Пастка середовища записів: `setUpClass` запам'ятовує `env`
+
+Запис, створений у `setUpClass`, **назавжди зберігає своє `env`** — uid, стан
+`sudo` і контекст. Тому в тесті прав, де ти перемикаєшся на звичайного
+користувача, фікстура з `setUpClass` поводитиметься як superuser, і ти
+отримаєш **хибно-зелений** тест.
+
+Лікування — `with_env`:
+
+```python
+def test_manager_sees_own_claims(self):
+    claim = self.claim.with_env(self.env)   # ← привести до поточного env
+    ...
+```
+
+Те саме стосується `with_user`/`with_company`: вони створюють **новий** env, і
+якщо всередині покладаєшся на фікстуру з `setUpClass`, її env не зміниться.
+
 
 ## 8. Типові пастки
 
